@@ -1,0 +1,22 @@
+[package]
+name = "litex-pac"
+version = "0.0.1"
+description = "svd2rust generated pac for the Colorlight 5A-75X Litex Risc-V Example SOC"
+license = "ISC"
+authors = ["Piotr Esden-Tempski <piotr@esden.net>"]
+edition = "2018"
+repository = "https://github.com/icebreaker-fpga/icebreaker-litex-examples"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bare-metal = "0.2.5"
+riscv = "0.6.0"
+vcell = "0.1.2"
+riscv-rt = { optional = true, version = "0.8.0" }
+
+[features]
+rt = ["riscv-rt"]
+
+[build-dependencies]
+svd2rust = "0.17.0"
