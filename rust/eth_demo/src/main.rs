@@ -63,7 +63,7 @@ fn main() -> ! {
     let mut timer = Timer::new(peripherals.TIMER0);
 
     let clock = mock::Clock::new();
-    let device = Eth::new();
+    let device = Eth::new(peripherals.ETHMAC, peripherals.ETH_BUFFERS);
 
     let mut neighbor_cache_entries = [None; 8];
     let neighbor_cache = NeighborCache::new(&mut neighbor_cache_entries[..]);

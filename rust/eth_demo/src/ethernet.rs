@@ -6,39 +6,38 @@ use smoltcp::{Error, Result};
 
 use log::trace;
 
-// TODO: Fix super ugly and unsafe device implementation
-
-pub struct Eth {}
+pub struct Eth {
+    ethmac: ETHMAC,
+    ethbuf: ETH_BUFFERS,
+}
 
 impl Eth {
-    pub fn new() -> Self {
-        let ethmac = ETHMAC::ptr();
-        unsafe {
-            (*ethmac).sram_writer_ev_pending.write(|w| w.bits(1));
-            (*ethmac).sram_reader_ev_pending.write(|w| w.bits(1));
-            (*ethmac).sram_reader_slot.write(|w| w.bits(0));
-        };
+    pub fn new(ethmac: ETHMAC, ethbuf: ETH_BUFFERS) -> Self {
+        ethmac.sram_writer_ev_pending.write(unsafe { |w| w.bits(1) });
+        ethmac.sram_reader_ev_pending.write(unsafe { |w| w.bits(1) });
+        ethmac.sram_reader_slot.write(unsafe { |w| w.bits(0) });
 
-        Eth {}
+        Eth {
+            ethmac,
+            ethbuf,
+        }
     }
 }
 
 impl<'a> phy::Device<'a> for Eth {
-    type RxToken = EthRxToken;
-    type TxToken = EthTxToken;
+    type RxToken = EthRxToken<'a>;
+    type TxToken = EthTxToken<'a>;
 
     fn receive(&'a mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        let ethmac = ETHMAC::ptr();
-        unsafe {
-            if (*ethmac).sram_writer_ev_pending.read().bits() == 0 {
-                return None;
-            }
+        if self.ethmac.sram_writer_ev_pending.read().bits() == 0 {
+            return None;
         }
-        Some((Self::RxToken {}, Self::TxToken {}))
+        Some((Self::RxToken { ethmac: &self.ethmac, ethbuf: &self.ethbuf },
+              Self::TxToken { ethmac: &self.ethmac, ethbuf: &self.ethbuf }))
     }
 
     fn transmit(&'a mut self) -> Option<Self::TxToken> {
-        Some(Self::TxToken {})
+        Some(Self::TxToken { ethmac: &self.ethmac, ethbuf: &self.ethbuf })
     }
 
     fn capabilities(&self) -> DeviceCapabilities {
@@ -49,9 +48,12 @@ impl<'a> phy::Device<'a> for Eth {
     }
 }
 
-pub struct EthRxToken {}
+pub struct EthRxToken<'a> {
+    ethmac: &'a ETHMAC,
+    ethbuf: &'a ETH_BUFFERS,
+}
 
-impl phy::RxToken for EthRxToken {
+impl<'a> phy::RxToken for EthRxToken<'a> {
     fn consume<R, F>(self, _timestamp: Instant, f: F) -> Result<R>
     where
         F: FnOnce(&mut [u8]) -> Result<R>,
@@ -59,17 +61,15 @@ impl phy::RxToken for EthRxToken {
         #[link_section = ".main_ram"]
         static mut RX_BUFFER: [u8; 2048] = [0; 2048];
 
-        let ethmac = ETHMAC::ptr();
-        let ethbuf = ETH_BUFFERS::ptr();
         unsafe {
-            if (*ethmac).sram_writer_ev_pending.read().bits() == 0 {
+            if self.ethmac.sram_writer_ev_pending.read().bits() == 0 {
                 return Err(Error::Exhausted);
             }
-            let slot = (*ethmac).sram_writer_slot.read().bits();
-            let length = (*ethmac).sram_writer_length.read().bits();
+            let slot = self.ethmac.sram_writer_slot.read().bits();
+            let length = self.ethmac.sram_writer_length.read().bits();
             match slot {
                 0 => {
-                    for (i, elem) in (*ethbuf).rx_buffer_0.iter().enumerate() {
+                    for (i, elem) in self.ethbuf.rx_buffer_0.iter().enumerate() {
                         if i > length as usize {
                             break;
                         }
@@ -77,7 +77,7 @@ impl phy::RxToken for EthRxToken {
                     }
                 }
                 1 => {
-                    for (i, elem) in (*ethbuf).rx_buffer_1.iter().enumerate() {
+                    for (i, elem) in self.ethbuf.rx_buffer_1.iter().enumerate() {
                         if i > length as usize {
                             break;
                         }
@@ -91,15 +91,18 @@ impl phy::RxToken for EthRxToken {
             trace!("Rx length: {}", length);
             trace!("Rx bytes: {:?}", &RX_BUFFER[..length as usize]);
             let result = f(&mut RX_BUFFER[..length as usize]);
-            (*ethmac).sram_writer_ev_pending.write(|w| w.bits(1));
+            self.ethmac.sram_writer_ev_pending.write(|w| w.bits(1));
             result
         }
     }
 }
 
-pub struct EthTxToken {}
+pub struct EthTxToken<'a> {
+    ethmac: &'a ETHMAC,
+    ethbuf: &'a ETH_BUFFERS,
+}
 
-impl phy::TxToken for EthTxToken {
+impl<'a> phy::TxToken for EthTxToken<'a> {
     fn consume<R, F>(self, _timestamp: Instant, len: usize, f: F) -> Result<R>
     where
         F: FnOnce(&mut [u8]) -> Result<R>,
@@ -108,40 +111,41 @@ impl phy::TxToken for EthTxToken {
         static mut TX_BUFFER: [u8; 2048] = [0; 2048];
         static mut SLOT: u8 = 0;
 
-        let ethmac = ETHMAC::ptr();
+        trace!("Wait for tx ready...");
+        while self.ethmac.sram_reader_ready.read().bits() == 0 {}
+        trace!("Tx ready...");
+        let result = f(unsafe { &mut TX_BUFFER[..len] });
         unsafe {
-            trace!("Wait for tx ready...");
-            while (*ethmac).sram_reader_ready.read().bits() == 0 {}
-            trace!("Tx ready...");
-            let ethbuf = ETH_BUFFERS::ptr();
-            let result = f(&mut TX_BUFFER[..len]);
             trace!("Tx slot: {}", SLOT);
             trace!("Tx length: {}", len);
             trace!("Tx bytes: {:?}", &TX_BUFFER[..len as usize]);
-            match SLOT {
-                0 => {
-                    for (i, elem) in (*ethbuf).tx_buffer_0.iter().enumerate() {
-                        if i > len {
-                            break;
-                        }
-                        elem.write(|w| w.bits(TX_BUFFER[i]));
-                    }
-                }
-                1 => {
-                    for (i, elem) in (*ethbuf).tx_buffer_1.iter().enumerate() {
-                        if i > len {
-                            break;
-                        }
-                        elem.write(|w| w.bits(TX_BUFFER[i]));
-                    }
-                }
-                _ => return Err(Error::Exhausted),
-            };
-            (*ethmac).sram_reader_slot.write(|w| w.bits(SLOT.into()));
-            (*ethmac).sram_reader_length.write(|w| w.bits(len as u32));
-            (*ethmac).sram_reader_start.write(|w| w.bits(1));
-            SLOT = (SLOT + 1) % 2;
-            result
         }
+        let current_slot = unsafe { SLOT };
+        match current_slot {
+            0 => {
+                for (i, elem) in self.ethbuf.tx_buffer_0.iter().enumerate() {
+                    if i > len {
+                        break;
+                    }
+                    elem.write(|w| unsafe { w.bits(TX_BUFFER[i]) });
+                }
+            }
+            1 => {
+                for (i, elem) in self.ethbuf.tx_buffer_1.iter().enumerate() {
+                    if i > len {
+                        break;
+                    }
+                    elem.write(|w| unsafe { w.bits(TX_BUFFER[i]) });
+                }
+            }
+            _ => return Err(Error::Exhausted),
+        };
+        self.ethmac.sram_reader_slot.write(unsafe { |w| w.bits(current_slot.into()) });
+        self.ethmac.sram_reader_length.write(unsafe { |w| w.bits(len as u32) });
+        self.ethmac.sram_reader_start.write(unsafe { |w| w.bits(1) });
+        unsafe {
+            SLOT = (SLOT + 1) % 2;
+        }
+        result
     }
 }
