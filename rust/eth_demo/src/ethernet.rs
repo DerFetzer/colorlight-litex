@@ -13,14 +13,15 @@ pub struct Eth {
 
 impl Eth {
     pub fn new(ethmac: ETHMAC, ethbuf: ETH_BUFFERS) -> Self {
-        ethmac.sram_writer_ev_pending.write(unsafe { |w| w.bits(1) });
-        ethmac.sram_reader_ev_pending.write(unsafe { |w| w.bits(1) });
+        ethmac
+            .sram_writer_ev_pending
+            .write(unsafe { |w| w.bits(1) });
+        ethmac
+            .sram_reader_ev_pending
+            .write(unsafe { |w| w.bits(1) });
         ethmac.sram_reader_slot.write(unsafe { |w| w.bits(0) });
 
-        Eth {
-            ethmac,
-            ethbuf,
-        }
+        Eth { ethmac, ethbuf }
     }
 }
 
@@ -32,12 +33,23 @@ impl<'a> phy::Device<'a> for Eth {
         if self.ethmac.sram_writer_ev_pending.read().bits() == 0 {
             return None;
         }
-        Some((Self::RxToken { ethmac: &self.ethmac, ethbuf: &self.ethbuf },
-              Self::TxToken { ethmac: &self.ethmac, ethbuf: &self.ethbuf }))
+        Some((
+            Self::RxToken {
+                ethmac: &self.ethmac,
+                ethbuf: &self.ethbuf,
+            },
+            Self::TxToken {
+                ethmac: &self.ethmac,
+                ethbuf: &self.ethbuf,
+            },
+        ))
     }
 
     fn transmit(&'a mut self) -> Option<Self::TxToken> {
-        Some(Self::TxToken { ethmac: &self.ethmac, ethbuf: &self.ethbuf })
+        Some(Self::TxToken {
+            ethmac: &self.ethmac,
+            ethbuf: &self.ethbuf,
+        })
     }
 
     fn capabilities(&self) -> DeviceCapabilities {
@@ -140,9 +152,15 @@ impl<'a> phy::TxToken for EthTxToken<'a> {
             }
             _ => return Err(Error::Exhausted),
         };
-        self.ethmac.sram_reader_slot.write(unsafe { |w| w.bits(current_slot.into()) });
-        self.ethmac.sram_reader_length.write(unsafe { |w| w.bits(len as u32) });
-        self.ethmac.sram_reader_start.write(unsafe { |w| w.bits(1) });
+        self.ethmac
+            .sram_reader_slot
+            .write(unsafe { |w| w.bits(current_slot.into()) });
+        self.ethmac
+            .sram_reader_length
+            .write(unsafe { |w| w.bits(len as u32) });
+        self.ethmac
+            .sram_reader_start
+            .write(unsafe { |w| w.bits(1) });
         unsafe {
             SLOT = (SLOT + 1) % 2;
         }
