@@ -542,10 +542,100 @@ the current countdown value to ``value`` register.]]></description>
                         </field>
                     </fields>
                 </register>
+                <register>
+                    <name>DFII_PI1_COMMAND</name>
+                    <addressOffset>0x001c</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_command</name>
+                            <msb>5</msb>
+                            <bitRange>[5:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_COMMAND_ISSUE</name>
+                    <addressOffset>0x0020</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_command_issue</name>
+                            <msb>0</msb>
+                            <bitRange>[0:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_ADDRESS</name>
+                    <addressOffset>0x0024</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_address</name>
+                            <msb>10</msb>
+                            <bitRange>[10:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_BADDRESS</name>
+                    <addressOffset>0x0028</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_baddress</name>
+                            <msb>1</msb>
+                            <bitRange>[1:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_WRDATA</name>
+                    <addressOffset>0x002c</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_wrdata</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_RDDATA</name>
+                    <addressOffset>0x0030</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-only</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_rddata</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
             </registers>
             <addressBlock>
                 <offset>0</offset>
-                <size>0x1c</size>
+                <size>0x34</size>
                 <usage>registers</usage>
             </addressBlock>
         </peripheral>
@@ -1006,9 +1096,9 @@ the current countdown value to ``value`` register.]]></description>
             </interrupt>
         </peripheral>
         <peripheral>
-            <name>ETH_BUFFERS</name>
+            <name>ETHMEM</name>
             <baseAddress>0x80000000</baseAddress>
-            <groupName>ETH_BUFFERS</groupName>
+            <groupName>ETHMEM</groupName>
             <registers>
                 <register>
                     <name>RX_BUFFER_0[%s]</name>

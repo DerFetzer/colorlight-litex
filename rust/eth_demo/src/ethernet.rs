@@ -1,4 +1,4 @@
-use litex_pac::{ETHMAC, ETH_BUFFERS};
+use litex_pac::{ETHMAC, ETHMEM};
 
 use smoltcp::phy::{self, DeviceCapabilities};
 use smoltcp::time::Instant;
@@ -8,11 +8,11 @@ use log::trace;
 
 pub struct Eth {
     ethmac: ETHMAC,
-    ethbuf: ETH_BUFFERS,
+    ethbuf: ETHMEM,
 }
 
 impl Eth {
-    pub fn new(ethmac: ETHMAC, ethbuf: ETH_BUFFERS) -> Self {
+    pub fn new(ethmac: ETHMAC, ethbuf: ETHMEM) -> Self {
         ethmac
             .sram_writer_ev_pending
             .write(unsafe { |w| w.bits(1) });
@@ -62,7 +62,7 @@ impl<'a> phy::Device<'a> for Eth {
 
 pub struct EthRxToken<'a> {
     ethmac: &'a ETHMAC,
-    ethbuf: &'a ETH_BUFFERS,
+    ethbuf: &'a ETHMEM,
 }
 
 impl<'a> phy::RxToken for EthRxToken<'a> {
@@ -111,7 +111,7 @@ impl<'a> phy::RxToken for EthRxToken<'a> {
 
 pub struct EthTxToken<'a> {
     ethmac: &'a ETHMAC,
-    ethbuf: &'a ETH_BUFFERS,
+    ethbuf: &'a ETHMEM,
 }
 
 impl<'a> phy::TxToken for EthTxToken<'a> {

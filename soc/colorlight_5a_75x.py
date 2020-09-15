@@ -219,9 +219,9 @@ def modify_svd(builder_kwargs):
     with open(builder_kwargs["csr_svd"], "r") as f:
         s = f.readlines()
     registers = """        <peripheral>
-            <name>ETH_BUFFERS</name>
+            <name>ETHMEM</name>
             <baseAddress>0x80000000</baseAddress>
-            <groupName>ETH_BUFFERS</groupName>
+            <groupName>ETHMEM</groupName>
             <registers>
                 <register>
                     <name>RX_BUFFER_0[%s]</name>
