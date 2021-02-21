@@ -14,10 +14,10 @@ $ rustc -V
 rustc 1.48.0-nightly (e2be5f568 2020-09-09)
 ```
 
-For bandwidth and disk usage concerns the default installation only supports native compilation. To add cross compilation support for the RISC-V architecture install the `riscv32i-unknown-none-elf` target.
+For bandwidth and disk usage concerns the default installation only supports native compilation. To add cross compilation support for the RISC-V architecture install the `riscv32imac-unknown-none-elf` target.
 
 ```
-rustup target add riscv32i-unknown-none-elf
+rustup target add riscv32imac-unknown-none-elf
 ```
 
 To learn more about Rust embedded, take a look at the Rust [embedded book](https://rust-embedded.github.io/book/).
