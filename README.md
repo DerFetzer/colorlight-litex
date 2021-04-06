@@ -9,9 +9,9 @@ This project is developed and maintained by [DerFetzer][team].
 1. Install Litex as described [here][litex].
 2. Install [ecpprog][ecpprog].
 4. Connect a USB to JTAG adaptor to your board.
-5. Build and flash the SOC with something like the following:
+5. Build and flash the SOC with the following (in the soc directory):
 ```
-python soc/colorlight_5a_75x.py --build --flash --board=5a-75e --revision=6.0 --with-ethernet --sys-clk-freq 50e6 --use-internal-osc
+python colorlight_5a_75x.py --build --flash --board=5a-75e --revision=6.0 --with-ethernet --sys-clk-freq 50e6 --use-internal-osc
 ```
 4. Follow the instructions in [eth_demo][eth_demo] to build the software.
 
@@ -26,4 +26,4 @@ and the Litex [target file][target] for the Colorlight board.
 [litex-example]: https://github.com/icebreaker-fpga/icebreaker-litex-examples
 [colorlight]: http://www.colorlight-led.com/product/colorlight-5a-75e-led-display-receiving-card.html
 [target]: https://github.com/litex-hub/litex-boards/blob/master/litex_boards/targets/colorlight_5a_75x.py
-[eth_demo]: rust/eth_demo/README.md 
+[eth_demo]: rust/eth_demo/README.md
