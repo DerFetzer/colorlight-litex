@@ -9,9 +9,11 @@ use riscv_rt::entry;
 mod ethernet;
 mod print;
 mod timer;
+mod leds;
 
 use crate::ethernet::Eth;
 use timer::Timer;
+use leds::Leds;
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -61,6 +63,8 @@ fn main() -> ! {
     info!("Logger initialized");
 
     let mut timer = Timer::new(peripherals.TIMER0);
+
+    let mut leds = Leds::new(peripherals.LEDS);
 
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
@@ -177,6 +181,9 @@ fn main() -> ! {
             None => clock.advance(Duration::from_millis(1)),
         }
         trace!("Clock elapsed: {}", clock.elapsed());
+
+        msleep(&mut timer, 1000 as u32);
+        leds.toggle();
     }
 }
 
