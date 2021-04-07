@@ -2,7 +2,7 @@
 
 <device schemaVersion="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd" >
     <vendor>litex</vendor>
-    <name>SOC</name>
+    <name>ETHMAC</name>
 
     <addressUnitBits>8</addressUnitBits>
     <width>32</width>
@@ -14,15 +14,16 @@
     <peripherals>
         <peripheral>
             <name>CTRL</name>
-            <baseAddress>0xF0000000</baseAddress>
+            <baseAddress>0xE0000000</baseAddress>
             <groupName>CTRL</groupName>
             <registers>
                 <register>
                     <name>RESET</name>
-                    <description><![CDATA[Any write to this register will reset the SoC.]]></description>
+                    <description><![CDATA[Write a ``1`` to this register to reset the SoC.]]></description>
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>reset</name>
@@ -40,6 +41,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x12345678</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>scratch</name>
@@ -55,6 +57,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>bus_errors</name>
@@ -73,7 +76,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
         </peripheral>
         <peripheral>
             <name>IDENTIFIER_MEM</name>
-            <baseAddress>0xF0001000</baseAddress>
+            <baseAddress>0xE0001000</baseAddress>
             <groupName>IDENTIFIER_MEM</groupName>
             <registers>
                 <register>
@@ -82,6 +85,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>identifier_mem</name>
@@ -99,8 +103,35 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
             </addressBlock>
         </peripheral>
         <peripheral>
+            <name>UART_PHY</name>
+            <baseAddress>0xE0001800</baseAddress>
+            <groupName>UART_PHY</groupName>
+            <registers>
+                <register>
+                    <name>TUNING_WORD</name>
+                    <addressOffset>0x0000</addressOffset>
+                    <resetValue>0x96feb4</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>tuning_word</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+            </registers>
+            <addressBlock>
+                <offset>0</offset>
+                <size>0x4</size>
+                <usage>registers</usage>
+            </addressBlock>
+        </peripheral>
+        <peripheral>
             <name>UART</name>
-            <baseAddress>0xF0002000</baseAddress>
+            <baseAddress>0xE0002000</baseAddress>
             <groupName>UART</groupName>
             <registers>
                 <register>
@@ -108,6 +139,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>rxtx</name>
@@ -122,6 +154,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>txfull</name>
@@ -136,6 +169,7 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>rxempty</name>
@@ -147,73 +181,46 @@ to the Wishbone/CSR bus are working correctly. The initial reset value of
                 </register>
                 <register>
                     <name>EV_STATUS</name>
-                    <description><![CDATA[This register contains the current raw level of the rx event trigger.  Writes to
-this register have no effect.]]></description>
                     <addressOffset>0x000c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>tx</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                            <description><![CDATA[Level of the ``tx`` event]]></description>
-                        </field>
-                        <field>
-                            <name>rx</name>
+                            <name>status</name>
                             <msb>1</msb>
-                            <bitRange>[1:1]</bitRange>
-                            <lsb>1</lsb>
-                            <description><![CDATA[Level of the ``rx`` event]]></description>
+                            <bitRange>[1:0]</bitRange>
+                            <lsb>0</lsb>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>EV_PENDING</name>
-                    <description><![CDATA[When a  rx event occurs, the corresponding bit will be set in this register.  To
-clear the Event, set the corresponding bit in this register.]]></description>
                     <addressOffset>0x0010</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>tx</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                            <description><![CDATA[`1` if a `tx` event occurred. This Event is triggered on a **falling** edge.]]></description>
-                        </field>
-                        <field>
-                            <name>rx</name>
+                            <name>pending</name>
                             <msb>1</msb>
-                            <bitRange>[1:1]</bitRange>
-                            <lsb>1</lsb>
-                            <description><![CDATA[`1` if a `rx` event occurred. This Event is triggered on a **falling** edge.]]></description>
+                            <bitRange>[1:0]</bitRange>
+                            <lsb>0</lsb>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>EV_ENABLE</name>
-                    <description><![CDATA[This register enables the corresponding rx events.  Write a ``0`` to this
-register to disable individual events.]]></description>
                     <addressOffset>0x0014</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>tx</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                            <description><![CDATA[Write a ``1`` to enable the ``tx`` Event]]></description>
-                        </field>
-                        <field>
-                            <name>rx</name>
+                            <name>enable</name>
                             <msb>1</msb>
-                            <bitRange>[1:1]</bitRange>
-                            <lsb>1</lsb>
-                            <description><![CDATA[Write a ``1`` to enable the ``rx`` Event]]></description>
+                            <bitRange>[1:0]</bitRange>
+                            <lsb>0</lsb>
                         </field>
                     </fields>
                 </register>
@@ -222,6 +229,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0018</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>txempty</name>
@@ -236,6 +244,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x001c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>rxfull</name>
@@ -258,7 +267,7 @@ register to disable individual events.]]></description>
         </peripheral>
         <peripheral>
             <name>TIMER0</name>
-            <baseAddress>0xF0002800</baseAddress>
+            <baseAddress>0xE0002800</baseAddress>
             <groupName>TIMER0</groupName>
             <registers>
                 <register>
@@ -268,6 +277,7 @@ this register specifies the Timer's duration in clock cycles.]]></description>
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>load</name>
@@ -284,6 +294,7 @@ this register specify the Timer's period in clock cycles.]]></description>
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>reload</name>
@@ -300,6 +311,7 @@ to ``0`` to disable the Timer.]]></description>
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>en</name>
@@ -316,6 +328,7 @@ the current countdown value to ``value`` register.]]></description>
                     <addressOffset>0x000c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>update_value</name>
@@ -331,6 +344,7 @@ the current countdown value to ``value`` register.]]></description>
                     <addressOffset>0x0010</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>value</name>
@@ -342,52 +356,46 @@ the current countdown value to ``value`` register.]]></description>
                 </register>
                 <register>
                     <name>EV_STATUS</name>
-                    <description><![CDATA[This register contains the current raw level of the zero event trigger.  Writes
-to this register have no effect.]]></description>
                     <addressOffset>0x0014</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>zero</name>
+                            <name>status</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[Level of the ``zero`` event]]></description>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>EV_PENDING</name>
-                    <description><![CDATA[When a  zero event occurs, the corresponding bit will be set in this register.
-To clear the Event, set the corresponding bit in this register.]]></description>
                     <addressOffset>0x0018</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>zero</name>
+                            <name>pending</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[`1` if a `zero` event occurred. This Event is triggered on a **falling** edge.]]></description>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>EV_ENABLE</name>
-                    <description><![CDATA[This register enables the corresponding zero events.  Write a ``0`` to this
-register to disable individual events.]]></description>
                     <addressOffset>0x001c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>zero</name>
+                            <name>enable</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[Write a ``1`` to enable the ``zero`` Event]]></description>
                         </field>
                     </fields>
                 </register>
@@ -404,7 +412,7 @@ register to disable individual events.]]></description>
         </peripheral>
         <peripheral>
             <name>SDRAM</name>
-            <baseAddress>0xF0003000</baseAddress>
+            <baseAddress>0xE0003000</baseAddress>
             <groupName>SDRAM</groupName>
             <registers>
                 <register>
@@ -412,6 +420,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x01</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>sel</name>
@@ -448,6 +457,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>dfii_pi0_command</name>
@@ -462,6 +472,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>dfii_pi0_command_issue</name>
@@ -476,6 +487,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x000c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>dfii_pi0_address</name>
@@ -490,11 +502,12 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0010</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>dfii_pi0_baddress</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
+                            <msb>1</msb>
+                            <bitRange>[1:0]</bitRange>
                             <lsb>0</lsb>
                         </field>
                     </fields>
@@ -504,6 +517,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0014</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>dfii_pi0_wrdata</name>
@@ -518,6 +532,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0018</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>dfii_pi0_rddata</name>
@@ -527,16 +542,106 @@ register to disable individual events.]]></description>
                         </field>
                     </fields>
                 </register>
+                <register>
+                    <name>DFII_PI1_COMMAND</name>
+                    <addressOffset>0x001c</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_command</name>
+                            <msb>5</msb>
+                            <bitRange>[5:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_COMMAND_ISSUE</name>
+                    <addressOffset>0x0020</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_command_issue</name>
+                            <msb>0</msb>
+                            <bitRange>[0:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_ADDRESS</name>
+                    <addressOffset>0x0024</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_address</name>
+                            <msb>10</msb>
+                            <bitRange>[10:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_BADDRESS</name>
+                    <addressOffset>0x0028</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_baddress</name>
+                            <msb>1</msb>
+                            <bitRange>[1:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_WRDATA</name>
+                    <addressOffset>0x002c</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-write</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_wrdata</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>DFII_PI1_RDDATA</name>
+                    <addressOffset>0x0030</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <access>read-only</access>
+                    <fields>
+                        <field>
+                            <name>dfii_pi1_rddata</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
             </registers>
             <addressBlock>
                 <offset>0</offset>
-                <size>0x1c</size>
+                <size>0x34</size>
                 <usage>registers</usage>
             </addressBlock>
         </peripheral>
         <peripheral>
             <name>SPIFLASH</name>
-            <baseAddress>0xF0003800</baseAddress>
+            <baseAddress>0xE0003800</baseAddress>
             <groupName>SPIFLASH</groupName>
             <registers>
                 <register>
@@ -545,6 +650,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>mosi</name>
@@ -582,6 +688,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>miso</name>
@@ -597,6 +704,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>bitbang_en</name>
@@ -615,7 +723,7 @@ register to disable individual events.]]></description>
         </peripheral>
         <peripheral>
             <name>ETHPHY</name>
-            <baseAddress>0xF0004000</baseAddress>
+            <baseAddress>0xE0004000</baseAddress>
             <groupName>ETHPHY</groupName>
             <registers>
                 <register>
@@ -623,6 +731,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>crg_reset</name>
@@ -637,6 +746,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>link_status</name>
@@ -666,6 +776,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>mdc</name>
@@ -695,6 +806,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x000c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>r</name>
@@ -714,7 +826,7 @@ register to disable individual events.]]></description>
         </peripheral>
         <peripheral>
             <name>ETHMAC</name>
-            <baseAddress>0xF0004800</baseAddress>
+            <baseAddress>0xE0004800</baseAddress>
             <groupName>ETHMAC</groupName>
             <registers>
                 <register>
@@ -722,6 +834,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0000</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>sram_writer_slot</name>
@@ -736,6 +849,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0004</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>sram_writer_length</name>
@@ -750,6 +864,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0008</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>sram_writer_errors</name>
@@ -761,53 +876,46 @@ register to disable individual events.]]></description>
                 </register>
                 <register>
                     <name>SRAM_WRITER_EV_STATUS</name>
-                    <description><![CDATA[This register contains the current raw level of the available event trigger.
-Writes to this register have no effect.]]></description>
                     <addressOffset>0x000c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>available</name>
+                            <name>sram_writer_ev_status</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[Level of the ``available`` event]]></description>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>SRAM_WRITER_EV_PENDING</name>
-                    <description><![CDATA[When a  available event occurs, the corresponding bit will be set in this
-register.  To clear the Event, set the corresponding bit in this register.]]></description>
                     <addressOffset>0x0010</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>available</name>
+                            <name>sram_writer_ev_pending</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[`1` if a `available` event occurred. This Event is **level triggered** when the
-signal is **high**.]]></description>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>SRAM_WRITER_EV_ENABLE</name>
-                    <description><![CDATA[This register enables the corresponding available events.  Write a ``0`` to this
-register to disable individual events.]]></description>
                     <addressOffset>0x0014</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>available</name>
+                            <name>sram_writer_ev_enable</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[Write a ``1`` to enable the ``available`` Event]]></description>
                         </field>
                     </fields>
                 </register>
@@ -816,6 +924,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0018</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>sram_reader_start</name>
@@ -830,6 +939,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x001c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>sram_reader_ready</name>
@@ -844,6 +954,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0020</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>sram_reader_level</name>
@@ -858,6 +969,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0024</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>sram_reader_slot</name>
@@ -872,6 +984,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0028</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
                             <name>sram_reader_length</name>
@@ -883,52 +996,46 @@ register to disable individual events.]]></description>
                 </register>
                 <register>
                     <name>SRAM_READER_EV_STATUS</name>
-                    <description><![CDATA[This register contains the current raw level of the done event trigger.  Writes
-to this register have no effect.]]></description>
                     <addressOffset>0x002c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>done</name>
+                            <name>sram_reader_ev_status</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[Level of the ``done`` event]]></description>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>SRAM_READER_EV_PENDING</name>
-                    <description><![CDATA[When a  done event occurs, the corresponding bit will be set in this register.
-To clear the Event, set the corresponding bit in this register.]]></description>
                     <addressOffset>0x0030</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>done</name>
+                            <name>sram_reader_ev_pending</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[`1` if a `done` event occurred. This Event is triggered on a **rising** edge.]]></description>
                         </field>
                     </fields>
                 </register>
                 <register>
                     <name>SRAM_READER_EV_ENABLE</name>
-                    <description><![CDATA[This register enables the corresponding done events.  Write a ``0`` to this
-register to disable individual events.]]></description>
                     <addressOffset>0x0034</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-write</access>
                     <fields>
                         <field>
-                            <name>done</name>
+                            <name>sram_reader_ev_enable</name>
                             <msb>0</msb>
                             <bitRange>[0:0]</bitRange>
                             <lsb>0</lsb>
-                            <description><![CDATA[Write a ``1`` to enable the ``done`` Event]]></description>
                         </field>
                     </fields>
                 </register>
@@ -937,6 +1044,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0038</addressOffset>
                     <resetValue>0x01</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>preamble_crc</name>
@@ -951,6 +1059,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x003c</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>preamble_errors</name>
@@ -965,6 +1074,7 @@ register to disable individual events.]]></description>
                     <addressOffset>0x0040</addressOffset>
                     <resetValue>0x00</resetValue>
                     <size>32</size>
+                    <access>read-only</access>
                     <fields>
                         <field>
                             <name>crc_errors</name>
@@ -1111,60 +1221,4 @@ register to disable individual events.]]></description>
             </addressBlock>
         </peripheral>
         </peripherals>
-    <vendorExtensions>
-        <memoryRegions>
-            <memoryRegion>
-                <name>SRAM</name>
-                <baseAddress>0x10000000</baseAddress>
-                <size>0x00002000</size>
-            </memoryRegion>
-            <memoryRegion>
-                <name>MAIN_RAM</name>
-                <baseAddress>0x40000000</baseAddress>
-                <size>0x00400000</size>
-            </memoryRegion>
-            <memoryRegion>
-                <name>SPIFLASH</name>
-                <baseAddress>0x20000000</baseAddress>
-                <size>0x02000000</size>
-            </memoryRegion>
-            <memoryRegion>
-                <name>ROM</name>
-                <baseAddress>0x20100000</baseAddress>
-                <size>0x01F00000</size>
-            </memoryRegion>
-            <memoryRegion>
-                <name>ETHMAC</name>
-                <baseAddress>0x80000000</baseAddress>
-                <size>0x00002000</size>
-            </memoryRegion>
-            <memoryRegion>
-                <name>CSR</name>
-                <baseAddress>0xF0000000</baseAddress>
-                <size>0x00010000</size>
-            </memoryRegion>
-        </memoryRegions>
-        <constants>
-            <constant name="CONFIG_CLOCK_FREQUENCY" value="50000000" />
-            <constant name="CONFIG_CPU_HAS_INTERRUPT" value="None" />
-            <constant name="CONFIG_CPU_RESET_ADDR" value="537919488" />
-            <constant name="CONFIG_CPU_TYPE_VEXRISCV" value="None" />
-            <constant name="CONFIG_CPU_VARIANT_IMAC" value="None" />
-            <constant name="CONFIG_CPU_HUMAN_NAME" value="VexRiscv_IMAC" />
-            <constant name="CONFIG_CPU_NOP" value="nop" />
-            <constant name="CONFIG_WITH_BUILD_TIME" value="None" />
-            <constant name="CONFIG_L2_SIZE" value="8192" />
-            <constant name="CONFIG_CSR_DATA_WIDTH" value="32" />
-            <constant name="CONFIG_CSR_ALIGNMENT" value="32" />
-            <constant name="CONFIG_BUS_STANDARD" value="WISHBONE" />
-            <constant name="CONFIG_BUS_DATA_WIDTH" value="32" />
-            <constant name="CONFIG_BUS_ADDRESS_WIDTH" value="32" />
-            <constant name="ETHMAC_RX_SLOTS" value="2" />
-            <constant name="ETHMAC_TX_SLOTS" value="2" />
-            <constant name="ETHMAC_SLOT_SIZE" value="2048" />
-            <constant name="ETHMAC_INTERRUPT" value="2" />
-            <constant name="TIMER0_INTERRUPT" value="1" />
-            <constant name="UART_INTERRUPT" value="0" />
-        </constants>
-    </vendorExtensions>
 </device>
