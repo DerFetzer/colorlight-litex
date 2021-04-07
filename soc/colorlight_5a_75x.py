@@ -255,15 +255,9 @@ class BaseSoC(SoCCore):
 
         # Ethernet / Etherbone ---------------------------------------------------------------------
         if with_ethernet or with_etherbone:
-            if board == "5a-75b" and revision == "7.0":
-                self.submodules.ethphy = LiteEthPHYRGMII(
-                    clock_pads = self.platform.request("eth_clocks", eth_phy),
-                    pads       = self.platform.request("eth", eth_phy),
-                    tx_delay   = 0e-9)
-            else:
-                self.submodules.ethphy = LiteEthPHYRGMII(
-                    clock_pads = self.platform.request("eth_clocks", eth_phy),
-                    pads       = self.platform.request("eth", eth_phy))
+            self.submodules.ethphy = LiteEthPHYRGMII(
+                clock_pads = self.platform.request("eth_clocks", eth_phy),
+                pads       = self.platform.request("eth", eth_phy))
             self.add_csr("ethphy")
             if with_ethernet:
                 self.add_ethernet(phy=self.ethphy)
@@ -295,14 +289,6 @@ class BaseSoC(SoCCore):
 def modify_svd(builder_kwargs):
     # Add Ethernet buffer peripheral to svd
     with open(builder_kwargs["csr_svd"], "r") as f:
-        line_number = 0
-        for l in f:         # search for the right place to insert
-            line_number += 1
-            if """</peripherals>""" in l:
-                line = line_number
-        print("inserting before line:")
-        print(line)
-        f.seek(0)
         s = f.readlines()
     registers = """        <peripheral>
             <name>ETHMEM</name>
@@ -389,7 +375,7 @@ def modify_svd(builder_kwargs):
             </addressBlock>
         </peripheral>
     """
-    s.insert(line-1, registers)
+    s.insert(-2, registers)
     with open(builder_kwargs["csr_svd"], "w") as f:
         f.writelines(s)
 
