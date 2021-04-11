@@ -1027,6 +1027,33 @@ register to disable individual events.]]></description>
             </addressBlock>
         </peripheral>
         <peripheral>
+            <name>ADC</name>
+            <baseAddress>0xF0005800</baseAddress>
+            <groupName>ADC</groupName>
+            <registers>
+                <register>
+                    <name>ADC_VALUE</name>
+                    <description><![CDATA[adc conversion value (continuously updated)]]></description>
+                    <addressOffset>0x0000</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <fields>
+                        <field>
+                            <name>adc_value</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+            </registers>
+            <addressBlock>
+                <offset>0</offset>
+                <size>0x4</size>
+                <usage>registers</usage>
+            </addressBlock>
+        </peripheral>
+        <peripheral>
             <name>ETHMEM</name>
             <baseAddress>0x80000000</baseAddress>
             <groupName>ETHMEM</groupName>

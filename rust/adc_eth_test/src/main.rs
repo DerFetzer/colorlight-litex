@@ -1,19 +1,23 @@
 #![no_std]
 #![no_main]
-
 extern crate panic_halt;
 
+
+// use litex_pac::baz;
 use litex_pac;
 use riscv_rt::entry;
+
 
 mod ethernet;
 mod print;
 mod timer;
 mod leds;
+mod adc;
 
 use crate::ethernet::Eth;
 use timer::Timer;
 use leds::Leds;
+use adc::Adc;
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -26,7 +30,17 @@ use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr};
 use crate::print::UartLogger;
 use log::{debug, info, trace};
 
+
+
 const SYSTEM_CLOCK_FREQUENCY: u32 = 49_600_000;
+
+
+
+// interrupt::interrupt!(TIMER0, isr);
+
+// fn isr(){
+//     let a = 1 + 2;
+// }
 
 mod mock {
     use core::cell::Cell;
@@ -65,6 +79,8 @@ fn main() -> ! {
     let mut timer = Timer::new(peripherals.TIMER0);
 
     let mut leds = Leds::new(peripherals.LEDS);
+
+    let mut adc = Adc::new(peripherals.ADC);
 
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
@@ -126,6 +142,8 @@ fn main() -> ! {
     let tcp_server_handle = socket_set.add(tcp_server_socket);
     let udp_server_handle = socket_set.add(udp_server_socket);
 
+    let mut vec: [u8; 5] = [1,2,3,4,5];
+
     info!("Main loop...");
 
     loop {
@@ -146,30 +164,22 @@ fn main() -> ! {
 
             if socket.can_send() {
                 info!("Can send...");
-                socket.send_slice(b"Hello World!\r\n").unwrap();
-                socket.close();
-            }
-        }
-
-        {
-            let mut socket = socket_set.get::<UdpSocket>(udp_server_handle);
-            if !socket.is_open() {
-                socket.bind(5678).unwrap()
+                socket.send_slice(&vec).unwrap();
             }
 
-            let client = match socket.recv() {
-                Ok((data, endpoint)) => {
-                    debug!("udp:5678 recv data: {:?} from {}", data, endpoint);
-                    Some(endpoint)
-                }
-                Err(_) => None,
-            };
-            if let Some(endpoint) = client {
-                let data = b"Hello World!\r\n";
-                debug!("udp:5678 send data: {:?}", data);
-                socket.send_slice(data, endpoint).unwrap();
+            msleep(&mut timer, 1000 as u32);
+            vec.rotate_right(1);
+            leds.toggle();
+
+            let adcval: u32 = adc.read();
+
+            if socket.can_send() {
+                socket.send_slice(&adcval.to_be_bytes()).unwrap();
             }
+
+            info!("adcval: {}", adcval);
         }
+
 
         match iface.poll_delay(&socket_set, clock.elapsed()) {
             Some(Duration { millis: 0 }) => {}
@@ -182,9 +192,16 @@ fn main() -> ! {
         }
         trace!("Clock elapsed: {}", clock.elapsed());
 
-        msleep(&mut timer, 1000 as u32);
-        leds.toggle();
+
     }
+}
+
+fn u32_to_u8(x:u32) -> [u8;4] {
+    let b1 : u8 = ((x >> 24) & 0xff) as u8;
+    let b2 : u8 = ((x >> 16) & 0xff) as u8;
+    let b3 : u8 = ((x >> 8) & 0xff) as u8;
+    let b4 : u8 = (x & 0xff) as u8;
+    return [b1, b2, b3, b4]
 }
 
 fn msleep(timer: &mut Timer, ms: u32) {

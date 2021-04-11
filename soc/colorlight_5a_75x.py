@@ -38,6 +38,8 @@ from litex.soc.cores.uart import UARTWishboneBridge
 
 import litex.soc.doc as lxsocdoc
 
+from adc import ADC
+
 
 class ECP5Programmer(GenericProgrammer):
     needs_bitreverse = False
@@ -51,6 +53,18 @@ class ECP5Programmer(GenericProgrammer):
 
 # My IOs -------------------------------------------------------------------------------------------
 
+        Subsignal("tx", Pins("P11")), # led (J19 DATA_LED-)
+        Subsignal("rx", Pins("M13")), # btn (J19 KEY+)
+        IOStandard("LVCMOS33")
+
+_myserial = [
+    ("myserial", 0,
+         Subsignal("tx", Pins("j1:14")),
+         Subsignal("rx", Pins("j1:13")),
+         IOStandard("LVCMOS33")
+     )
+]
+
 _dac = [
     ("dac", 0, Pins("j4:0"), IOStandard("LVCMOS33")),
     ("dac", 1, Pins("j4:1"), IOStandard("LVCMOS33")),       # sigma-delta dac output
@@ -58,7 +72,7 @@ _dac = [
 
 _leds = [
     ("g", 0, Pins("j6:5"), IOStandard("LVCMOS33")),
-    ("r", 0, Pins("j6:7"), IOStandard("LVCMOS33")),
+    ("r", 0, Pins("j6:10"), IOStandard("LVCMOS33")),        # Not really here but there is congestion with the pins otherwise..
     ("y", 0, Pins("j6:9"), IOStandard("LVCMOS33")),
 ]
 
@@ -72,7 +86,7 @@ _adc_first_order = [
 _adc_second_order = [
     ("in", 0, Pins("j1:1"), IOStandard("LVDS")),
     ("sd", 0, Pins("j1:5"), IOStandard("LVCMOS33")),        # sigma delta out
-    ("sd", 1, Pins("j1:7"), IOStandard("LVCMOS33")),        # sigma delta out
+    ("sd", 1, Pins("j1:7"), IOStandard("LVCMOS33")),        # sigma delta out (copy of first)
     ("p3v", 0, Pins("j1:0"), IOStandard("LVCMOS33")),      # this will make 3V on the connector
     ("p5v", 0, Pins("j1:14"), IOStandard("LVCMOS33")),      # this will make 5V on the connector bc buffer IC
 ]
@@ -185,6 +199,9 @@ class BaseSoC(SoCCore):
         if board == "5a-75e" and revision == "6.0" and (with_etherbone or with_ethernet):
             assert use_internal_osc, "You cannot use the 25MHz clock as system clock since it is provided by the Ethernet PHY and will stop during PHY reset."
 
+        # add custom serial port ios
+        platform.add_extension(_myserial)
+
         # Set cpu name and variant defaults when none are provided
         if "cpu_variant" not in kwargs:
             if debug:
@@ -199,6 +216,9 @@ class BaseSoC(SoCCore):
 
         # Set CPU reset address
         kwargs["cpu_reset_address"] = self.mem_map["spiflash"] + flash_offset
+
+        # defaul uart myserial
+        kwargs["uart_name"] = "myserial"
 
         # Select "crossover" as soc uart instead of "serial"
         # We have to make that selection before calling the parent initializer
@@ -273,6 +293,7 @@ class BaseSoC(SoCCore):
 
         # add IO extentions
         platform.add_extension(_leds)
+        platform.add_extension(_adc_second_order)
 
 
         # LEDs blinkyblinky :)
@@ -288,6 +309,28 @@ class BaseSoC(SoCCore):
                 ["g", "The Green Red LED."]])
 
         self.add_csr("leds")
+
+
+        # sigma delta ADC using lame CSR for now
+
+        self.submodules.adc = adc = ADC()
+
+        adc_in = platform.request("in")
+        adc_sd = platform.request("sd", 0)
+        adc_sd2 = platform.request("sd", 1)
+        #p5v = platform.request("p5v")
+        p3v = platform.request("p3v")
+
+        self.comb += [
+            adc.inp.eq(adc_in),
+            adc_sd.eq(adc.sd),
+            adc_sd2.eq(adc.sd),
+            #p5v.eq(1),
+            p3v.eq(1),
+        ]
+
+        self.add_csr("adc")
+
 
 
 # Helper functions ---------------------------------------------------------------------------------
