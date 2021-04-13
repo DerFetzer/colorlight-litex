@@ -173,7 +173,7 @@ fn main() -> ! {
 
             msleep(&mut timer, 1000 as u32);
             vec.rotate_right(1);
-            leds.toggle();
+            // leds.toggle_mask(4);
             //
             // let adcval: u32 = adc.read();
             //
@@ -228,18 +228,35 @@ fn main() -> ! {
     }
 }
 
-// #[no_mangle]
-// pub fn trap_handler() {
-//     unsafe{mstatus::clear_mie();
-//     vmim::write(0);}
-// }
 
 #[no_mangle]
 fn DefaultHandler() {
-    unsafe{mstatus::clear_mie();
-    vmim::write(0);
+    let mc = mcause::read();
+    let irqs_pending = vmip::read();
+    vmim::write(0);                     // absolutely neccessary right now to disable interrupts otherwise the processor is stuck.
+
+    if mc.is_exception() {};
+
+    if irqs_pending == 2 {
+        handle_timer_irq();
     }
+
 }
+
+fn handle_timer_irq() {
+
+    let peripherals = unsafe{ litex_pac::Peripherals::steal() };
+
+    let mut timer = Timer::new(peripherals.TIMER0);
+    let mut leds = Leds::new(peripherals.LEDS);
+
+    leds.toggle_mask(2);
+    timer.disable();
+
+}
+
+
+
 
 fn u32_to_u8(x:u32) -> [u8;4] {
     let b1 : u8 = ((x >> 24) & 0xff) as u8;
