@@ -233,7 +233,7 @@ fn main() -> ! {
 fn DefaultHandler() {
     let mc = mcause::read();
     let irqs_pending = vmip::read();
-    vmim::write(0);                     // absolutely neccessary right now to disable interrupts otherwise the processor is stuck.
+    vmim::write(0); // absolutely neccessary right now to disable interrupts otherwise the processor is stuck.
 
     if mc.is_exception() {};
 
@@ -250,8 +250,8 @@ fn handle_timer_irq() {
     let mut timer = Timer::new(peripherals.TIMER0);
     let mut leds = Leds::new(peripherals.LEDS);
 
-    leds.toggle_mask(2);
-    timer.disable();
+    leds.toggle();
+    timer.dis_interrupt();
 
 }
 
