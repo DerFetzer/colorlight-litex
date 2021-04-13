@@ -40,6 +40,8 @@ import litex.soc.doc as lxsocdoc
 
 from adc import ADC
 
+from litex.soc.cores.gpio import GPIOIn
+
 
 class ECP5Programmer(GenericProgrammer):
     needs_bitreverse = False
@@ -231,7 +233,7 @@ class BaseSoC(SoCCore):
             ident_version  = True,
             **kwargs)
 
-        with_rst = kwargs["uart_name"] not in ["serial", "bridge", "crossover"] # serial_rx shared with user_btn_n.
+        with_rst = False # kwargs["uart_name"] not in ["serial", "bridge", "crossover"] # serial_rx shared with user_btn_n.
         with_usb_pll = kwargs.get("uart_name", None) == "usb_acm"
         self.submodules.crg = _CRG(platform, sys_clk_freq, use_internal_osc=use_internal_osc, with_usb_pll=with_usb_pll, with_rst=with_rst, sdram_rate=sdram_rate)
 
@@ -331,6 +333,10 @@ class BaseSoC(SoCCore):
 
         self.add_csr("adc")
 
+        self.submodules.gpio = gpio = GPIOIn(platform.request("user_btn_n", 0), with_irq=True)
+
+        self.add_csr("gpio")
+        self.add_interrupt("gpio")
 
 
 # Helper functions ---------------------------------------------------------------------------------

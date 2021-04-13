@@ -17,11 +17,13 @@ mod print;
 mod timer;
 mod leds;
 mod adc;
+mod gpio;
 
 use crate::ethernet::Eth;
 use timer::Timer;
 use leds::Leds;
 use adc::Adc;
+use gpio::Gpio;
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -85,6 +87,8 @@ fn main() -> ! {
     let mut leds = Leds::new(peripherals.LEDS);
 
     let mut adc = Adc::new(peripherals.ADC);
+
+    let mut gpio = Gpio::new(peripherals.GPIO);
 
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
@@ -171,6 +175,10 @@ fn main() -> ! {
                 socket.send_slice(&vec).unwrap();
             }
 
+
+            gpio.set_interrupt_polarity(true);  // falling edge
+            gpio.en_interrupt();
+
             msleep(&mut timer, 1000 as u32);
             vec.rotate_right(1);
             // leds.toggle_mask(4);
@@ -186,6 +194,7 @@ fn main() -> ! {
             info!("vmim: {}", vmim::read());
             info!("mcause: {}", mcause::read().bits());
             info!("mie: {}", mie::read().bits());
+            info!("btn: {}", gpio.status());
 
             timer.en_interrupt();
 
@@ -197,7 +206,7 @@ fn main() -> ! {
                 mie::set_mext();
                 mstatus::set_mie(); // Enable CPU interrupts
                 mstatus::clear_mie();
-                vmim::write(2);
+                vmim::write(0xa);   // 1010 for timer and gpio
                 mstatus::set_mie();
             }
             msleep(&mut timer, 500 as u32);
@@ -237,8 +246,13 @@ fn DefaultHandler() {
 
     if mc.is_exception() {};
 
-    if irqs_pending == 2 {
+
+    if irqs_pending & (1 << 1) != 0 {
         handle_timer_irq();
+    }
+
+    if irqs_pending & (1 << 3) != 0 {
+        handle_btn_irq();
     }
 
 }
@@ -250,9 +264,20 @@ fn handle_timer_irq() {
     let mut timer = Timer::new(peripherals.TIMER0);
     let mut leds = Leds::new(peripherals.LEDS);
 
-    leds.toggle();
-    timer.dis_interrupt();
+    leds.toggle_mask(4);    // toggle green led
+    timer.clr_interrupt();
 
+}
+
+fn handle_btn_irq() {
+
+    let peripherals = unsafe{ litex_pac::Peripherals::steal() };
+
+    let mut gpio = Gpio::new(peripherals.GPIO);
+    let mut leds = Leds::new(peripherals.LEDS);
+
+    leds.toggle_mask(2);    // toggle yellow led
+    gpio.clr_interrupt();
 }
 
 
