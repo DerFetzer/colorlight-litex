@@ -233,7 +233,7 @@ fn main() -> ! {
 fn DefaultHandler() {
     let mc = mcause::read();
     let irqs_pending = vmip::read();
-    vmim::write(0); // absolutely neccessary right now to disable interrupts otherwise the processor is stuck.
+    // vmim::write(0); // absolutely neccessary right now to disable interrupts otherwise the processor is stuck.
 
     if mc.is_exception() {};
 

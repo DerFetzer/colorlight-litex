@@ -49,7 +49,7 @@ impl Timer {
 
     pub fn dis_interrupt(&mut self) {
         unsafe {
-            self.registers.ev_enable.write(|w| w.bits(1));
+            self.registers.ev_enable.write(|w| w.bits(0));
         }
     }
 }
