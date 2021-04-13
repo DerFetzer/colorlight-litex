@@ -3,9 +3,13 @@
 extern crate panic_halt;
 
 
-// use litex_pac::baz;
+extern crate riscv;
+extern crate riscv_rt;
 use litex_pac;
 use riscv_rt::entry;
+
+use vexriscv::register::{vdci, vmim, vmip, vsim, vsip};
+use riscv::register::{mstatus, mcause, mie};
 
 
 mod ethernet;
@@ -170,14 +174,42 @@ fn main() -> ! {
             msleep(&mut timer, 1000 as u32);
             vec.rotate_right(1);
             leds.toggle();
+            //
+            // let adcval: u32 = adc.read();
+            //
+            // if socket.can_send() {
+            //     socket.send_slice(&adcval.to_be_bytes()).unwrap();
+            // }
 
-            let adcval: u32 = adc.read();
+            info!("\nbefore:");
+            info!("vmip: {}", vmip::read());
+            info!("vmim: {}", vmim::read());
+            info!("mcause: {}", mcause::read().bits());
+            info!("mie: {}", mie::read().bits());
 
-            if socket.can_send() {
-                socket.send_slice(&adcval.to_be_bytes()).unwrap();
+            timer.en_interrupt();
+
+
+            unsafe{
+                vmim::write(0); // Disable all machine interrupts
+                mie::set_msoft();
+                mie::set_mtimer();
+                mie::set_mext();
+                mstatus::set_mie(); // Enable CPU interrupts
+                mstatus::clear_mie();
+                vmim::write(2);
+                mstatus::set_mie();
             }
+            msleep(&mut timer, 500 as u32);
+            info!("\nafter:");
+            info!("vmip: {}", vmip::read());
+            info!("vmim: {}", vmim::read());
+            info!("mcause: {}", mcause::read().bits());
+            info!("mie: {}", mie::read().bits());
+            vmim::write(0);
 
-            info!("adcval: {}", adcval);
+            // info!("vsim: {}", vsim::read());
+            // info!("vsip: {}", vsip::read());
         }
 
 
@@ -193,6 +225,19 @@ fn main() -> ! {
         trace!("Clock elapsed: {}", clock.elapsed());
 
 
+    }
+}
+
+// #[no_mangle]
+// pub fn trap_handler() {
+//     unsafe{mstatus::clear_mie();
+//     vmim::write(0);}
+// }
+
+#[no_mangle]
+fn DefaultHandler() {
+    unsafe{mstatus::clear_mie();
+    vmim::write(0);
     }
 }
 

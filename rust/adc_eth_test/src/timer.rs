@@ -40,4 +40,10 @@ impl Timer {
 
         self.registers.value.read().bits()
     }
+
+    pub fn en_interrupt(&mut self) {
+        unsafe {
+            self.registers.ev_enable.write(|w| w.bits(1));
+        }
+    }
 }
