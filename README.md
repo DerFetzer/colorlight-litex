@@ -1,19 +1,11 @@
-# `Colorlight 5A-75X Litex Ethernet Demo`
+# `Rust SoC Playground using LiteX, VexRiscV and the Colorlight 5A-75B board`
 
-> Litex SoC and Rust software for [Colorlight 5A-75X][colorlight] board as a simple Ethernet demo.
+Trying lots of different things (in different branches).
 
-This project is developed and maintained by [DerFetzer][team].
-
-## Usage
-
-1. Install Litex as described [here][litex].
-2. Install [ecpprog][ecpprog].
-4. Connect a USB to JTAG adaptor to your board.
-5. Build and flash the SOC with the following (in the soc directory):
-```
-python colorlight_5a_75x.py --build --flash --board=5a-75e --revision=6.0 --with-ethernet --sys-clk-freq 50e6 --use-internal-osc
-```
-4. Follow the instructions in [eth_demo][eth_demo] to build the software.
+Working so far:
+- Ethernet with smoltcp thanks to https://github.com/DerFetzer/colorlight-litex 
+- Interrupts by staring a lot at https://github.com/betrusted-io/xous-core
+- A simple second order sigma-delta ADC using a CIC decimator
 
 ## Credits
 
