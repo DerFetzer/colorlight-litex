@@ -18,12 +18,14 @@ mod timer;
 mod leds;
 mod adc;
 mod gpio;
+mod gpio1;
 
 use crate::ethernet::Eth;
 use timer::Timer;
 use leds::Leds;
 use adc::Adc;
 use gpio::Gpio;
+use gpio1::Gpio1;
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -90,6 +92,8 @@ fn main() -> ! {
 
     let mut gpio = Gpio::new(peripherals.GPIO);
 
+    let mut gpio1 = Gpio1::new(peripherals.GPIO1);
+
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
 
@@ -152,34 +156,40 @@ fn main() -> ! {
 
     let mut vec: [u8; 5] = [1,2,3,4,5];
 
+    gpio.en_interrupt();
+    gpio1.en_interrupt();
+
+
     info!("Main loop...");
 
     loop {
-        match iface.poll(&mut socket_set, clock.elapsed()) {
-            Ok(_) => {}
-            Err(e) => {
-                debug!("Poll error: {}", e);
-            }
-        }
-
-        {
-            let mut socket = socket_set.get::<TcpSocket>(tcp_server_handle);
-
-            if !socket.is_active() && !socket.is_listening() {
-                info!("Start listen...");
-                socket.listen(1234).unwrap();
-            }
-
-            if socket.can_send() {
-                info!("Can send...");
-                socket.send_slice(&vec).unwrap();
-            }
-
-
-            gpio.set_interrupt_polarity(true);  // falling edge
-            gpio.en_interrupt();
-
-            msleep(&mut timer, 1000 as u32);
+        // match iface.poll(&mut socket_set, clock.elapsed()) {
+        //     Ok(_) => {}
+        //     Err(e) => {
+        //         debug!("Poll error: {}", e);
+        //     }
+        // }
+        //
+        // {
+        //     let mut socket = socket_set.get::<TcpSocket>(tcp_server_handle);
+        //
+        //     if !socket.is_active() && !socket.is_listening() {
+        //         info!("Start listen...");
+        //         socket.listen(1234).unwrap();
+        //     }
+        //
+        //     if socket.can_send() {
+        //         info!("Can send...");
+        //         socket.send_slice(&vec).unwrap();
+        //     }
+        //
+        //
+        //     gpio.set_interrupt_polarity(true);  // falling edge
+        //     gpio.dis_interrupt();
+        //     gpio1.set_interrupt_polarity(false);  // falling edge
+        //     gpio1.dis_interrupt();
+        //
+        //     msleep(&mut timer, &mut leds, 1000 as u32);
             vec.rotate_right(1);
             // leds.toggle_mask(4);
             //
@@ -195,43 +205,79 @@ fn main() -> ! {
             info!("mcause: {}", mcause::read().bits());
             info!("mie: {}", mie::read().bits());
             info!("btn: {}", gpio.status());
+            info!("ev_pending_gpio: {}", gpio.ev_pending());
+            info!("ev_status_gpio: {}", gpio.ev_status());
+            info!("ev_enable_gpio: {}", gpio.ev_enable());
+            info!("ev_pending_timer: {}", timer.ev_pending());
+            info!("ev_status_timer: {}", timer.ev_status());
+            info!("ev_enable_timer: {}", timer.ev_enable());
 
-            timer.en_interrupt();
 
+            //
+            // timer.dis_interrupt();
+            // timer.clr_interrupt();
+
+            for i in 0..10000{
+                for j in 0..1000{
+                    leds.toggle_mask(2);    // toggle yellow led
+                }
+            }
+
+
+
+
+            // timer.disable();
+
+            // timer.reload(0);
+            // timer.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 1000);
+
+            // timer.enable();
 
             unsafe{
                 vmim::write(0); // Disable all machine interrupts
                 mie::set_msoft();
-                mie::set_mtimer();
+                // mie::set_mtimer();
                 mie::set_mext();
                 mstatus::set_mie(); // Enable CPU interrupts
-                mstatus::clear_mie();
-                vmim::write(0xa);   // 1010 for timer and gpio
+                vmim::write(0xFFFF_FFFF);   // 1010 for timer and gpio
                 mstatus::set_mie();
             }
-            msleep(&mut timer, 500 as u32);
+            // msleep(&mut timer, &mut leds, 500 as u32);
             info!("\nafter:");
             info!("vmip: {}", vmip::read());
             info!("vmim: {}", vmim::read());
             info!("mcause: {}", mcause::read().bits());
             info!("mie: {}", mie::read().bits());
-            vmim::write(0);
+            info!("btn: {}", gpio.status());
+            info!("ev_pending_gpio: {}", gpio.ev_pending());
+            info!("ev_status_gpio: {}", gpio.ev_status());
+            info!("ev_enable_gpio: {}", gpio.ev_enable());
+            info!("ev_pending_timer: {}", timer.ev_pending());
+            info!("ev_status_timer: {}", timer.ev_status());
+            info!("ev_enable_timer: {}", timer.ev_enable());
+            // vmim::write(0);
 
             // info!("vsim: {}", vsim::read());
             // info!("vsip: {}", vsip::read());
-        }
+        // }
 
-
-        match iface.poll_delay(&socket_set, clock.elapsed()) {
-            Some(Duration { millis: 0 }) => {}
-            Some(delay) => {
-                trace!("sleeping for {} ms", delay);
-                msleep(&mut timer, delay.total_millis() as u32);
-                clock.advance(delay)
+        for i in 0..10000{
+            for j in 0..1000{
+                leds.toggle_mask(2);    // toggle yellow led
             }
-            None => clock.advance(Duration::from_millis(1)),
         }
-        trace!("Clock elapsed: {}", clock.elapsed());
+
+        //
+        // match iface.poll_delay(&socket_set, clock.elapsed()) {
+        //     Some(Duration { millis: 0 }) => {}
+        //     Some(delay) => {
+        //         trace!("sleeping for {} ms", delay);
+        //         msleep(&mut timer, &mut leds, delay.total_millis() as u32);
+        //         clock.advance(delay)
+        //     }
+        //     None => clock.advance(Duration::from_millis(1)),
+        // }
+        // trace!("Clock elapsed: {}", clock.elapsed());
 
 
     }
@@ -239,12 +285,24 @@ fn main() -> ! {
 
 
 #[no_mangle]
-fn DefaultHandler() {
+fn MachineExternal() {
     let mc = mcause::read();
     let irqs_pending = vmip::read();
     // vmim::write(0); // absolutely neccessary right now to disable interrupts otherwise the processor is stuck.
 
     if mc.is_exception() {};
+
+
+    let peripherals = unsafe{ litex_pac::Peripherals::steal() };
+
+    let mut timer = Timer::new(peripherals.TIMER0);
+    let mut leds = Leds::new(peripherals.LEDS);
+    let mut gpio1 = Gpio1::new(peripherals.GPIO1);
+    let mut gpio = Gpio::new(peripherals.GPIO);
+    gpio1.clr_interrupt();
+    // gpio.clr_interrupt();
+
+
 
 
     if irqs_pending & (1 << 1) != 0 {
@@ -254,6 +312,10 @@ fn DefaultHandler() {
     if irqs_pending & (1 << 3) != 0 {
         handle_btn_irq();
     }
+
+
+    // timer.clr_interrupt();
+
 
 }
 
@@ -271,13 +333,39 @@ fn handle_timer_irq() {
 
 fn handle_btn_irq() {
 
+
+
     let peripherals = unsafe{ litex_pac::Peripherals::steal() };
 
     let mut gpio = Gpio::new(peripherals.GPIO);
     let mut leds = Leds::new(peripherals.LEDS);
 
-    leds.toggle_mask(2);    // toggle yellow led
+    // gpio.clr_interrupt()
+    leds.toggle_mask(4);
+    if gpio.ev_pending() == 0 {
+        leds.toggle_mask(4);    // toggle green led
+    }
+    // leds.toggle_mask(4);    // toggle green led
+    // leds.toggle_mask(4);    // toggle green led
+    for i in 0..2000{
+        for j in 0..1045{
+            leds.toggle_mask(2);    // toggle yellow led
+        }
+    }
     gpio.clr_interrupt();
+    if gpio.ev_pending() == 0 {
+        leds.toggle_mask(4);    // toggle green led
+    }
+    for i in 0..5000{
+        for j in 0..1000{
+            leds.toggle_mask(2);    // toggle yellow led
+        }
+    }
+    // vmim::write(0);
+    // gpio.dis_interrupt();
+    // gpio.clr_interrupt();
+    // gpio.en_interrupt();
+    // gpio.clr_interrupt();
 }
 
 
@@ -291,7 +379,7 @@ fn u32_to_u8(x:u32) -> [u8;4] {
     return [b1, b2, b3, b4]
 }
 
-fn msleep(timer: &mut Timer, ms: u32) {
+fn msleep(timer: &mut Timer, leds : &mut Leds, ms: u32) {
     timer.disable();
 
     timer.reload(0);
@@ -300,6 +388,8 @@ fn msleep(timer: &mut Timer, ms: u32) {
     timer.enable();
 
     // Wait until the time has elapsed
-    while timer.value() > 0 {}
+    while timer.value() > 0 {
+        // leds.toggle_mask(2);    // toggle yellow led
+    }
     timer.disable();
 }

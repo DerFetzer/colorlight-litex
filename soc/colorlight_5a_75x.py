@@ -55,9 +55,6 @@ class ECP5Programmer(GenericProgrammer):
 
 # My IOs -------------------------------------------------------------------------------------------
 
-        Subsignal("tx", Pins("P11")), # led (J19 DATA_LED-)
-        Subsignal("rx", Pins("M13")), # btn (J19 KEY+)
-        IOStandard("LVCMOS33")
 
 _myserial = [
     ("myserial", 0,
@@ -76,6 +73,7 @@ _leds = [
     ("g", 0, Pins("j6:5"), IOStandard("LVCMOS33")),
     ("r", 0, Pins("j6:10"), IOStandard("LVCMOS33")),        # Not really here but there is congestion with the pins otherwise..
     ("y", 0, Pins("j6:9"), IOStandard("LVCMOS33")),
+    ("iox", 0, Pins("j3:1"), IOStandard("LVCMOS33")),
 ]
 
 _adc_first_order = [
@@ -321,14 +319,14 @@ class BaseSoC(SoCCore):
         adc_sd = platform.request("sd", 0)
         adc_sd2 = platform.request("sd", 1)
         #p5v = platform.request("p5v")
-        p3v = platform.request("p3v")
+        #p3v = platform.request("p3v")
 
         self.comb += [
             adc.inp.eq(adc_in),
             adc_sd.eq(adc.sd),
             adc_sd2.eq(adc.sd),
             #p5v.eq(1),
-            p3v.eq(1),
+            #p3v.eq(1),
         ]
 
         self.add_csr("adc")
@@ -337,6 +335,11 @@ class BaseSoC(SoCCore):
 
         self.add_csr("gpio")
         self.add_interrupt("gpio")
+
+        self.submodules.gpio1 = gpio1 = GPIOIn(platform.request("p3v"), with_irq=True)
+
+        self.add_csr("gpio1")
+        self.add_interrupt("gpio1")
 
 
 # Helper functions ---------------------------------------------------------------------------------

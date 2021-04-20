@@ -1,13 +1,13 @@
-use litex_pac::GPIO;
+use litex_pac::GPIO1;
 
-pub struct Gpio {
-    registers: GPIO,
+pub struct Gpio1 {
+    registers: GPIO1,
 }
 
 #[allow(dead_code)]
-impl Gpio {
+impl Gpio1 {
 
-    pub fn new(registers: GPIO) -> Self {
+    pub fn new(registers: GPIO1) -> Self {
         Self { registers }
     }
 
