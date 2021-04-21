@@ -27,6 +27,7 @@ from litex.soc.integration.builder import Builder, builder_argdict, builder_args
 from litex.soc.integration.soc_core import soc_core_argdict, soc_core_args
 from litex.soc.interconnect.csr import AutoCSR, CSRStorage, CSRStatus, CSRField
 from litex.soc.integration.doc import AutoDoc, ModuleDoc
+from litex.soc.cores.timer import Timer
 
 from litex.build.generic_platform import *
 
@@ -73,7 +74,9 @@ _leds = [
     ("g", 0, Pins("j6:5"), IOStandard("LVCMOS33")),
     ("r", 0, Pins("j6:10"), IOStandard("LVCMOS33")),        # Not really here but there is congestion with the pins otherwise..
     ("y", 0, Pins("j6:9"), IOStandard("LVCMOS33")),
-    ("iox", 0, Pins("j3:1"), IOStandard("LVCMOS33")),
+    ("g1", 0, Pins("j7:1"), IOStandard("LVCMOS33")),
+    ("r1", 0, Pins("j7:0"), IOStandard("LVCMOS33")),
+    ("y1", 0, Pins("j7:2"), IOStandard("LVCMOS33")),
 ]
 
 _adc_first_order = [
@@ -301,14 +304,33 @@ class BaseSoC(SoCCore):
         self.submodules.leds = Leds(Cat(
             platform.request("r"),
             platform.request("y"),
-            platform.request("g")),
+            platform.request("g")
+            ),
             led_polarity=0x00,
             led_name=[
                 ["r", "The Red LED."],
                 ["y", "The Yellow LED."],
-                ["g", "The Green Red LED."]])
+                ["g", "The Green Red LED."]
+                ])
 
         self.add_csr("leds")
+
+        self.submodules.leds2 = Leds(Cat(
+            platform.request("r1"),
+            platform.request("y1"),
+            platform.request("g1")
+            ),
+            led_polarity=0x00,
+            led_name=[
+                ["r1", "The second Red LED."],
+                ["y1", "The second Yellow LED."],
+                ["g1", "The second Green Red LED."]
+                ])
+
+        self.add_csr("leds2")
+
+
+
 
 
         # sigma delta ADC using lame CSR for now
@@ -332,14 +354,16 @@ class BaseSoC(SoCCore):
         self.add_csr("adc")
 
         self.submodules.gpio = gpio = GPIOIn(platform.request("user_btn_n", 0), with_irq=True)
-
         self.add_csr("gpio")
         self.add_interrupt("gpio")
 
         self.submodules.gpio1 = gpio1 = GPIOIn(platform.request("p3v"), with_irq=True)
-
         self.add_csr("gpio1")
         self.add_interrupt("gpio1")
+
+        self.submodules.timer2 = Timer()
+        self.add_csr("timer2")
+        self.add_interrupt("timer2")
 
 
 # Helper functions ---------------------------------------------------------------------------------

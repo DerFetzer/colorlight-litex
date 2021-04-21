@@ -22,7 +22,9 @@ mod gpio1;
 
 use crate::ethernet::Eth;
 use timer::Timer;
+use timer::Timer2;
 use leds::Leds;
+use leds::Leds2;
 use adc::Adc;
 use gpio::Gpio;
 use gpio1::Gpio1;
@@ -85,6 +87,7 @@ fn main() -> ! {
     info!("Logger initialized");
 
     let mut timer = Timer::new(peripherals.TIMER0);
+    let mut timer2 = Timer2::new(peripherals.TIMER2);
 
     let mut leds = Leds::new(peripherals.LEDS);
 
@@ -156,8 +159,15 @@ fn main() -> ! {
 
     let mut vec: [u8; 5] = [1,2,3,4,5];
 
-    gpio.en_interrupt();
-    gpio1.en_interrupt();
+    // gpio.en_interrupt();
+    // gpio1.en_interrupt();
+
+
+    timer2.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 4000);
+
+    timer2.enable();
+
+    timer2.en_interrupt();
 
 
     info!("Main loop...");
@@ -238,7 +248,7 @@ fn main() -> ! {
                 mie::set_msoft();
                 // mie::set_mtimer();
                 mie::set_mext();
-                mstatus::set_mie(); // Enable CPU interrupts
+                // mstatus::set_mie(); // Enable CPU interrupts
                 vmim::write(0xFFFF_FFFF);   // 1010 for timer and gpio
                 mstatus::set_mie();
             }
@@ -266,6 +276,7 @@ fn main() -> ! {
                 leds.toggle_mask(2);    // toggle yellow led
             }
         }
+        leds.set(0x0);
 
         //
         // match iface.poll_delay(&socket_set, clock.elapsed()) {
@@ -313,6 +324,10 @@ fn MachineExternal() {
         handle_btn_irq();
     }
 
+    if irqs_pending & (1 << 5) != 0 {
+        handle_timer2_irq();
+    }
+
 
     // timer.clr_interrupt();
 
@@ -331,6 +346,25 @@ fn handle_timer_irq() {
 
 }
 
+fn handle_timer2_irq() {
+
+    let peripherals = unsafe{ litex_pac::Peripherals::steal() };
+
+    let mut timer2 = Timer2::new(peripherals.TIMER2);
+    let mut leds2 = Leds2::new(peripherals.LEDS2);
+
+    leds2.toggle_mask(0xf);
+    timer2.clr_interrupt();
+    timer2.disable();
+
+    timer2.reload(0);
+
+    timer2.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 4000);
+
+    timer2.enable();
+
+}
+
 fn handle_btn_irq() {
 
 
@@ -341,24 +375,25 @@ fn handle_btn_irq() {
     let mut leds = Leds::new(peripherals.LEDS);
 
     // gpio.clr_interrupt()
-    leds.toggle_mask(4);
-    if gpio.ev_pending() == 0 {
-        leds.toggle_mask(4);    // toggle green led
-    }
+     leds.toggle_mask(0x10);
+    // if gpio.ev_pending() == 0 {
+    //     leds.toggle_mask(0x2);    // toggle green led
+    // }
     // leds.toggle_mask(4);    // toggle green led
     // leds.toggle_mask(4);    // toggle green led
-    for i in 0..2000{
+    for i in 0..10000{
         for j in 0..1045{
-            leds.toggle_mask(2);    // toggle yellow led
+            leds.toggle_mask(0x8);    // toggle yellow led
         }
     }
     gpio.clr_interrupt();
-    if gpio.ev_pending() == 0 {
-        leds.toggle_mask(4);    // toggle green led
-    }
-    for i in 0..5000{
+    leds.toggle_mask(0xff);
+    // if gpio.ev_pending() == 0 {
+    //     leds.toggle_mask(0xff);    // toggle green led
+    // }
+    for i in 0..2000{
         for j in 0..1000{
-            leds.toggle_mask(2);    // toggle yellow led
+            leds.toggle_mask(0x8);    // toggle yellow led
         }
     }
     // vmim::write(0);
