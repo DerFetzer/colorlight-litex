@@ -20,11 +20,10 @@ mod adc;
 mod gpio;
 
 use crate::ethernet::Eth;
-use timer::Timer;
-use leds::Leds;
-use leds::Leds2;
+use timer::{Timer,Timer2};
+use leds::{Leds,Leds2};
 use adc::Adc;
-use gpio::Gpio;
+use gpio::{Gpio};
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -78,9 +77,10 @@ fn main() -> ! {
     info!("Logger initialized");
 
     let mut timer = Timer::new(peripherals.TIMER0);
-    let mut timer2 = Timer::new(peripherals.TIMER2);
+    let mut timer2 = Timer2::new(peripherals.TIMER2);
 
     let mut leds = Leds::new(peripherals.LEDS);
+    let mut leds2 = Leds2::new(peripherals.LEDS2);
 
     let mut adc = Adc::new(peripherals.ADC);
 
@@ -152,11 +152,17 @@ fn main() -> ! {
 
     timer2.en_interrupt();
 
+    unsafe{
+        vmim::write(0xFFFF_FFFF);   // 1010 for timer and gpio
+        mstatus::set_mie();
+        mie::set_mext();
+    }
 
     info!("Main loop...");
 
     loop {
         info!("{}", timer2.value());
+        leds.toggle_mask(0xf);
     }
 }
 
@@ -166,6 +172,28 @@ fn MachineExternal() {
     let mc = mcause::read();
     let irqs_pending = vmip::read();
     if mc.is_exception() {};
+    if irqs_pending & (1 << 5) != 0 {
+        handle_timer2_irq();
+    }
+}
+
+fn handle_timer2_irq() {
+
+    let peripherals = unsafe{ litex_pac::Peripherals::steal() };
+
+    let mut timer2 = Timer2::new(peripherals.TIMER2);
+    let mut leds2 = Leds2::new(peripherals.LEDS2);
+
+    leds2.toggle_mask(0xf);
+    timer2.clr_interrupt();
+    timer2.disable();
+
+    timer2.reload(0);
+
+    timer2.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 4000);
+
+    timer2.enable();
+
 }
 
 // fn msleep(timer: &mut Timer, leds : &mut Leds, ms: u32) {
