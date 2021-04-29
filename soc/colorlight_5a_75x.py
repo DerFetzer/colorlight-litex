@@ -357,10 +357,6 @@ class BaseSoC(SoCCore):
         self.add_csr("gpio")
         self.add_interrupt("gpio")
 
-        self.submodules.gpio1 = gpio1 = GPIOIn(platform.request("p3v"), with_irq=True)
-        self.add_csr("gpio1")
-        self.add_interrupt("gpio1")
-
         self.submodules.timer2 = Timer()
         self.add_csr("timer2")
         self.add_interrupt("timer2")
