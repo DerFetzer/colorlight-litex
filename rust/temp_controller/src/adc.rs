@@ -13,5 +13,4 @@ impl Adc {
     pub fn read(&mut self) -> u32 {
         self.registers.adc_value.read().bits()
     }
-
 }

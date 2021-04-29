@@ -1,4 +1,4 @@
-use litex_pac::{TIMER0,TIMER2};
+use litex_pac::{TIMER0, TIMER2};
 
 pub struct Timer {
     registers: TIMER0,
@@ -71,7 +71,6 @@ impl Timer {
         self.registers.ev_enable.read().bits()
     }
 }
-
 
 pub struct Timer2 {
     registers: TIMER2,

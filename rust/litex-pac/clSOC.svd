@@ -1192,105 +1192,8 @@ register to disable individual events.]]></description>
             </interrupt>
         </peripheral>
         <peripheral>
-            <name>GPIO1</name>
-            <baseAddress>0xF0007000</baseAddress>
-            <groupName>GPIO1</groupName>
-            <registers>
-                <register>
-                    <name>IN</name>
-                    <description><![CDATA[GPIO Input(s) Status.]]></description>
-                    <addressOffset>0x0000</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>in</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                        </field>
-                    </fields>
-                </register>
-                <register>
-                    <name>POLARITY</name>
-                    <description><![CDATA[GPIO IRQ Polarity: 0: Rising Edge, 1: Falling Edge.]]></description>
-                    <addressOffset>0x0004</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>polarity</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                        </field>
-                    </fields>
-                </register>
-                <register>
-                    <name>EV_STATUS</name>
-                    <description><![CDATA[This register contains the current raw level of the i0 event trigger.  Writes to
-this register have no effect.]]></description>
-                    <addressOffset>0x0008</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>i0</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                            <description><![CDATA[Level of the ``i0`` event]]></description>
-                        </field>
-                    </fields>
-                </register>
-                <register>
-                    <name>EV_PENDING</name>
-                    <description><![CDATA[When a  i0 event occurs, the corresponding bit will be set in this register.  To
-clear the Event, set the corresponding bit in this register.]]></description>
-                    <addressOffset>0x000c</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>i0</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                            <description><![CDATA[`1` if a `i0` event occurred. This Event is triggered on a **falling** edge.]]></description>
-                        </field>
-                    </fields>
-                </register>
-                <register>
-                    <name>EV_ENABLE</name>
-                    <description><![CDATA[This register enables the corresponding i0 events.  Write a ``0`` to this
-register to disable individual events.]]></description>
-                    <addressOffset>0x0010</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>i0</name>
-                            <msb>0</msb>
-                            <bitRange>[0:0]</bitRange>
-                            <lsb>0</lsb>
-                            <description><![CDATA[Write a ``1`` to enable the ``i0`` Event]]></description>
-                        </field>
-                    </fields>
-                </register>
-            </registers>
-            <addressBlock>
-                <offset>0</offset>
-                <size>0x14</size>
-                <usage>registers</usage>
-            </addressBlock>
-            <interrupt>
-                <name>gpio1</name>
-                <value>4</value>
-            </interrupt>
-        </peripheral>
-        <peripheral>
             <name>TIMER2</name>
-            <baseAddress>0xF0007800</baseAddress>
+            <baseAddress>0xF0007000</baseAddress>
             <groupName>TIMER2</groupName>
             <registers>
                 <register>
@@ -1431,8 +1334,50 @@ register to disable individual events.]]></description>
             </addressBlock>
             <interrupt>
                 <name>timer2</name>
-                <value>5</value>
+                <value>4</value>
             </interrupt>
+        </peripheral>
+        <peripheral>
+            <name>PWM</name>
+            <baseAddress>0xF0007800</baseAddress>
+            <groupName>PWM</groupName>
+            <registers>
+                <register>
+                    <name>PERIOD</name>
+                    <description><![CDATA[pwm period in sys cycles]]></description>
+                    <addressOffset>0x0000</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <fields>
+                        <field>
+                            <name>period</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+                <register>
+                    <name>VALUE</name>
+                    <description><![CDATA[pwm output value in sys cycles]]></description>
+                    <addressOffset>0x0004</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <fields>
+                        <field>
+                            <name>value</name>
+                            <msb>31</msb>
+                            <bitRange>[31:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+            </registers>
+            <addressBlock>
+                <offset>0</offset>
+                <size>0x8</size>
+                <usage>registers</usage>
+            </addressBlock>
         </peripheral>
         <peripheral>
             <name>ETHMEM</name>
@@ -1572,9 +1517,8 @@ register to disable individual events.]]></description>
             <constant name="ETHMAC_SLOT_SIZE" value="2048" />
             <constant name="ETHMAC_INTERRUPT" value="2" />
             <constant name="GPIO_INTERRUPT" value="3" />
-            <constant name="GPIO1_INTERRUPT" value="4" />
             <constant name="TIMER0_INTERRUPT" value="1" />
-            <constant name="TIMER2_INTERRUPT" value="5" />
+            <constant name="TIMER2_INTERRUPT" value="4" />
             <constant name="UART_INTERRUPT" value="0" />
         </constants>
     </vendorExtensions>

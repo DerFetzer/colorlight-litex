@@ -40,6 +40,8 @@ from litex.soc.cores.uart import UARTWishboneBridge
 import litex.soc.doc as lxsocdoc
 
 from adc import ADC
+from leds import Leds
+from pwm import PWM
 
 from litex.soc.cores.gpio import GPIOIn
 
@@ -70,6 +72,10 @@ _dac = [
     ("dac", 1, Pins("j4:1"), IOStandard("LVCMOS33")),       # sigma-delta dac output
 ]
 
+_pwm = [
+    ("pwm", 0, Pins("j3:0"), IOStandard("LVCMOS33")),
+]
+
 _leds = [
     ("g", 0, Pins("j6:5"), IOStandard("LVCMOS33")),
     ("r", 0, Pins("j6:10"), IOStandard("LVCMOS33")),        # Not really here but there is congestion with the pins otherwise..
@@ -94,28 +100,6 @@ _adc_second_order = [
     ("p5v", 0, Pins("j1:14"), IOStandard("LVCMOS33")),      # this will make 5V on the connector bc buffer IC
 ]
 
-
-# LEDs ---------------------------------------------------------------------------------------------
-
-class Leds(Module, AutoCSR, AutoDoc):
-    """LED control.
-    3 LEDs connected to random IOs
-    Attributes:
-        led_pin: Signals of the LED pin outputs.
-        led_polarity: Bit pattern to adjust polarity. 0 stays the same 1 inverts the signal.
-        led_name: Array of the LED names and descriptions. [["name1", "description1"], ["name2", "description2"]]
-    """
-    def __init__(self, led_pin, led_polarity=0x00, led_name=[]):
-        # Documentation
-        self.intro = ModuleDoc("""LED control.
-        The LEDs are normal LEDs. Good information. :) 
-        """)
-
-        # HDL Implementationj
-        self._out = CSRStorage(len(led_pin), fields=[
-            CSRField(fld[0], description=fld[1]) for fld in led_name
-        ])
-        self.comb += led_pin.eq(self._out.storage ^ led_polarity)
 
 
 # CRG ----------------------------------------------------------------------------------------------
@@ -296,6 +280,7 @@ class BaseSoC(SoCCore):
 
         # add IO extentions
         platform.add_extension(_leds)
+        platform.add_extension(_pwm)
         platform.add_extension(_adc_second_order)
 
 
@@ -360,6 +345,11 @@ class BaseSoC(SoCCore):
         self.submodules.timer2 = Timer()
         self.add_csr("timer2")
         self.add_interrupt("timer2")
+
+        self.submodules.pwm = PWM(platform.request("pwm"), width=32)
+        self.add_csr("pwm")
+
+
 
 
 # Helper functions ---------------------------------------------------------------------------------

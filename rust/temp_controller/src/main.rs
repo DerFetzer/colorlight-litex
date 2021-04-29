@@ -2,28 +2,28 @@
 #![no_main]
 extern crate panic_halt;
 
-
 extern crate riscv;
 extern crate riscv_rt;
 use litex_pac;
 use riscv_rt::entry;
 
+use riscv::register::{mcause, mie, mstatus};
 use vexriscv::register::{vdci, vmim, vmip, vsim, vsip};
-use riscv::register::{mstatus, mcause, mie};
 
-
-mod ethernet;
-mod print;
-mod timer;
-mod leds;
 mod adc;
+mod ethernet;
 mod gpio;
+mod leds;
+mod print;
+mod pwm;
+mod timer;
 
 use crate::ethernet::Eth;
-use timer::{Timer,Timer2};
-use leds::{Leds,Leds2};
 use adc::Adc;
-use gpio::{Gpio};
+use gpio::Gpio;
+use leds::{Leds, Leds2};
+use pwm::Pwm;
+use timer::{Timer, Timer2};
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -36,11 +36,7 @@ use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr};
 use crate::print::UartLogger;
 use log::{debug, info, trace};
 
-
-
 const SYSTEM_CLOCK_FREQUENCY: u32 = 49_600_000;
-
-
 
 mod mock {
     use core::cell::Cell;
@@ -85,6 +81,8 @@ fn main() -> ! {
     let mut adc = Adc::new(peripherals.ADC);
 
     let mut gpio = Gpio::new(peripherals.GPIO);
+
+    let mut pwm = Pwm::new(peripherals.PWM);
 
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
@@ -152,8 +150,11 @@ fn main() -> ! {
 
     timer2.en_interrupt();
 
-    unsafe{
-        vmim::write(0xFFFF_FFFF);   // 1010 for timer and gpio
+    pwm.set_period(1 << 15);
+    pwm.set_value(1 << 13);
+
+    unsafe {
+        vmim::write(0xFFFF_FFFF); // 1010 for timer and gpio
         mstatus::set_mie();
         mie::set_mext();
     }
@@ -166,20 +167,31 @@ fn main() -> ! {
     }
 }
 
-
 #[no_mangle]
 fn MachineExternal() {
     let mc = mcause::read();
     let irqs_pending = vmip::read();
     if mc.is_exception() {};
-    if irqs_pending & (1 << 5) != 0 {
-        handle_timer2_irq();
+    for irq_no in 0..32 {
+        if irqs_pending & (1 << irq_no) != 0 {
+            match isr_to_interrupt(irq_no) {
+                Some(1) => system_tick(),
+                _ => {} //unsafe{vmim::write(vmim::read() ^ (1<<irq_no))} // disable non-impl. interrupt
+            }
+        }
     }
 }
 
-fn handle_timer2_irq() {
+pub fn isr_to_interrupt(isr: u8) -> Option<u8> {
+    if isr == (litex_pac::Interrupt::TIMER2 as u8) {
+        return Some(1);
+    }
 
-    let peripherals = unsafe{ litex_pac::Peripherals::steal() };
+    None
+}
+
+fn system_tick() {
+    let peripherals = unsafe { litex_pac::Peripherals::steal() }; // steal all but only use the safe ones ;)
 
     let mut timer2 = Timer2::new(peripherals.TIMER2);
     let mut leds2 = Leds2::new(peripherals.LEDS2);
@@ -193,7 +205,6 @@ fn handle_timer2_irq() {
     timer2.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 4000);
 
     timer2.enable();
-
 }
 
 // fn msleep(timer: &mut Timer, leds : &mut Leds, ms: u32) {

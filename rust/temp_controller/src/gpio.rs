@@ -1,4 +1,4 @@
-use litex_pac::{GPIO};
+use litex_pac::GPIO;
 
 pub struct Gpio {
     registers: GPIO,
@@ -6,7 +6,6 @@ pub struct Gpio {
 
 #[allow(dead_code)]
 impl Gpio {
-
     pub fn new(registers: GPIO) -> Self {
         Self { registers }
     }
@@ -19,7 +18,7 @@ impl Gpio {
         unsafe {
             if pol {
                 self.registers.polarity.write(|w| w.bits(1));
-            }else {
+            } else {
                 self.registers.polarity.write(|w| w.bits(0));
             }
         }
@@ -27,7 +26,6 @@ impl Gpio {
 
     pub fn en_interrupt(&mut self) {
         unsafe {
-
             self.registers.ev_enable.write(|w| w.bits(0xffff));
         }
     }
@@ -55,7 +53,6 @@ impl Gpio {
     pub fn ev_enable(&mut self) -> u32 {
         self.registers.ev_enable.read().bits()
     }
-
 }
 
 // pub struct Gpio2 {

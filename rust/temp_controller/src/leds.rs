@@ -1,4 +1,4 @@
-use litex_pac::{LEDS,LEDS2};
+use litex_pac::{LEDS, LEDS2};
 
 pub struct Leds {
     registers: LEDS,
@@ -10,8 +10,7 @@ impl Leds {
         Self { registers }
     }
 
-    pub fn set_single(&mut self, red: bool, yellow: bool,
-        green: bool) {
+    pub fn set_single(&mut self, red: bool, yellow: bool, green: bool) {
         self.registers.out.write(|w| {
             w.r().bit(red);
             w.g().bit(green);
@@ -49,7 +48,6 @@ impl Leds {
     }
 }
 
-
 pub struct Leds2 {
     registers: LEDS2,
 }
@@ -60,8 +58,7 @@ impl Leds2 {
         Self { registers }
     }
 
-    pub fn set_single(&mut self, red: bool, yellow: bool,
-        green: bool) {
+    pub fn set_single(&mut self, red: bool, yellow: bool, green: bool) {
         self.registers.out.write(|w| {
             w.r1().bit(red);
             w.g1().bit(green);
