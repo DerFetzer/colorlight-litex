@@ -17,6 +17,8 @@ mod leds;
 mod print;
 mod pwm;
 mod timer;
+mod iir;
+
 
 use crate::ethernet::Eth;
 use adc::Adc;
@@ -24,6 +26,8 @@ use gpio::Gpio;
 use leds::{Leds, Leds2};
 use pwm::Pwm;
 use timer::{Timer, Timer2};
+
+use iir::Iir;
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -83,6 +87,12 @@ fn main() -> ! {
     let mut gpio = Gpio::new(peripherals.GPIO);
 
     let mut pwm = Pwm::new(peripherals.PWM);
+
+    let mut iir = Iir{
+        ba : [1<<30,1<<30,1<<30,0,0],
+        shift : 30,
+        xy : [0,0,0,0,0],
+    };
 
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
@@ -144,10 +154,9 @@ fn main() -> ! {
     let tcp_server_handle = socket_set.add(tcp_server_socket);
     let udp_server_handle = socket_set.add(udp_server_socket);
 
-    timer2.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 4000);
-
+    timer2.load(0);
+    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 1_000 * 500);
     timer2.enable();
-
     timer2.en_interrupt();
 
     pwm.set_period(1 << 15);
@@ -162,7 +171,8 @@ fn main() -> ! {
     info!("Main loop...");
 
     loop {
-        info!("{}", timer2.value());
+        let x = timer2.value();
+        info!("x:{}   y:{} ", x, iir.tick(x as i32));
         leds.toggle_mask(0xf);
     }
 }
@@ -190,21 +200,17 @@ pub fn isr_to_interrupt(isr: u8) -> Option<u8> {
     None
 }
 
-fn system_tick() {
-    let peripherals = unsafe { litex_pac::Peripherals::steal() }; // steal all but only use the safe ones ;)
 
+// Main signal processing routine. Triggered by Timer2.
+fn system_tick() {
+
+    let peripherals = unsafe { litex_pac::Peripherals::steal() }; // steal all but only use the safe ones ;)
     let mut timer2 = Timer2::new(peripherals.TIMER2);
     let mut leds2 = Leds2::new(peripherals.LEDS2);
 
+    // leds2.on();
     leds2.toggle_mask(0xf);
     timer2.clr_interrupt();
-    timer2.disable();
-
-    timer2.reload(0);
-
-    timer2.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * 4000);
-
-    timer2.enable();
 }
 
 // fn msleep(timer: &mut Timer, leds : &mut Leds, ms: u32) {

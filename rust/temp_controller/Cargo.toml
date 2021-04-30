@@ -1,5 +1,5 @@
 [package]
-name = "adc_test"
+name = "temp_controller"
 version = "0.1.0"
 authors = ["Piotr Esden-Tempski <piotr@esden.net>", "DerFetzer <kontakt@der-fetzer.de>", "SingularitySurfer"]
 edition = "2018"
