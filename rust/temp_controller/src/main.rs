@@ -44,7 +44,7 @@ use smoltcp::wire::{EthernetAddress, IpAddress, IpCidr};
 use crate::print::UartLogger;
 use log::{debug, info, trace};
 
-const SYSTEM_CLOCK_FREQUENCY: u32 = 49_600_000;
+const SYSTEM_CLOCK_FREQUENCY: u32 = 60_000_000;
 
 
 // static IIR: Mutex<Cell<Iir>> =  Mutex::new(Cell::new(Iir{
@@ -110,12 +110,6 @@ fn main() -> ! {
 
     let mut dac = Dac::new(peripherals.DAC);
 
-    let mut iir = Iir{
-        ba : [1<<30,1<<30,1<<30,0,0],
-        shift : 30,
-        xy : [0,0,0,0,0],
-    };
-
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
 
@@ -177,7 +171,7 @@ fn main() -> ! {
     let udp_server_handle = socket_set.add(udp_server_socket);
 
     timer2.load(0);
-    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 1_000 * 1);
+    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 100_000);
     timer2.enable();
     timer2.en_interrupt();
 
@@ -193,9 +187,6 @@ fn main() -> ! {
     info!("Main loop...");
 
     loop {
-        let x = adc.read();
-        info!("x:{}   y:{} ", x, iir.tick(x as i32));
-        // dac.set(timer2.value() >> 12);
         leds.toggle_mask(0xf);
     }
 }
@@ -231,13 +222,13 @@ fn system_tick() {
     let mut leds2 = Leds2::new(peripherals.LEDS2);
     let mut dac = Dac::new(peripherals.DAC);
     let mut adc = Adc::new(peripherals.ADC);
-
+    leds2.on();
     // interrupt::free(|cs| let y = IIR.borrow(cs).get_mut().tick(timer2.value()));
     unsafe {let y = IIR.tick(adc.read() as i32);
         dac.set(y as u32 >> 16);
     }
     // leds2.on();
-    leds2.toggle_mask(0xf);
+    leds2.off();
     timer2.clr_interrupt();
 }
 
