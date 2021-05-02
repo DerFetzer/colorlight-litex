@@ -155,6 +155,18 @@ class _CRG(Module):
         self.specials += DDROutput(1, 0, platform.request("sdram_clock"), sdram_clk)
 
 
+class DAC(Module, AutoCSR):
+    """Basic first order sigma-delta DAC running at sys clock"""
+    def __init__(self, pin, bits):
+        self.val = CSRStorage(bits, description='dac output value')
+        accu = Signal(bits+1)
+        self.sync += [
+            accu.eq(accu[:-1] + self.val.storage),  # clever form of integrator with feedback
+            pin.eq(accu[-1])
+        ]
+
+
+
 # BaseSoC ------------------------------------------------------------------------------------------
 
 class BaseSoC(SoCCore):
@@ -282,6 +294,7 @@ class BaseSoC(SoCCore):
         platform.add_extension(_leds)
         platform.add_extension(_pwm)
         platform.add_extension(_adc_second_order)
+        platform.add_extension(_dac)
 
 
         # LEDs blinkyblinky :)
@@ -326,14 +339,14 @@ class BaseSoC(SoCCore):
         adc_sd = platform.request("sd", 0)
         adc_sd2 = platform.request("sd", 1)
         #p5v = platform.request("p5v")
-        #p3v = platform.request("p3v")
+        p3v = platform.request("p3v")
 
         self.comb += [
             adc.inp.eq(adc_in),
             adc_sd.eq(adc.sd),
             adc_sd2.eq(adc.sd),
             #p5v.eq(1),
-            #p3v.eq(1),
+            p3v.eq(1),
         ]
 
         self.add_csr("adc")
@@ -348,6 +361,9 @@ class BaseSoC(SoCCore):
 
         self.submodules.pwm = PWM(platform.request("pwm"), width=32)
         self.add_csr("pwm")
+
+        self.submodules.dac = DAC(platform.request("dac", 1), bits=16)
+        self.add_csr("dac")
 
 
 

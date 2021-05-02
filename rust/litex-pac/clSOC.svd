@@ -1380,6 +1380,33 @@ register to disable individual events.]]></description>
             </addressBlock>
         </peripheral>
         <peripheral>
+            <name>DAC</name>
+            <baseAddress>0xF0008000</baseAddress>
+            <groupName>DAC</groupName>
+            <registers>
+                <register>
+                    <name>VAL</name>
+                    <description><![CDATA[dac output value]]></description>
+                    <addressOffset>0x0000</addressOffset>
+                    <resetValue>0x00</resetValue>
+                    <size>32</size>
+                    <fields>
+                        <field>
+                            <name>val</name>
+                            <msb>15</msb>
+                            <bitRange>[15:0]</bitRange>
+                            <lsb>0</lsb>
+                        </field>
+                    </fields>
+                </register>
+            </registers>
+            <addressBlock>
+                <offset>0</offset>
+                <size>0x4</size>
+                <usage>registers</usage>
+            </addressBlock>
+        </peripheral>
+        <peripheral>
             <name>ETHMEM</name>
             <baseAddress>0x80000000</baseAddress>
             <groupName>ETHMEM</groupName>
