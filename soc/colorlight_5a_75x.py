@@ -72,8 +72,19 @@ _dac = [
     ("dac", 1, Pins("j4:1"), IOStandard("LVCMOS33")),       # sigma-delta dac output
 ]
 
+_peltier_driver = [
+    ("pd", 0, Pins("j3:0"), IOStandard("LVCMOS33")),
+    ("pd", 1, Pins("j3:1"), IOStandard("LVCMOS33")),
+    ("pd", 2, Pins("j3:2"), IOStandard("LVCMOS33")),
+    ("pd", 3, Pins("j3:4"), IOStandard("LVCMOS33")),
+    ("pd", 4, Pins("j2:2"), IOStandard("LVCMOS33")),
+    ("pd", 5, Pins("j2:4"), IOStandard("LVCMOS33")),
+    ("pd", 6, Pins("j2:5"), IOStandard("LVCMOS33")),
+    ("pd", 7, Pins("j2:6"), IOStandard("LVCMOS33")),
+]
+
 _pwm = [
-    ("pwm", 0, Pins("j3:0"), IOStandard("LVCMOS33")),
+    ("pwm", 0, Pins("j2:0"), IOStandard("LVCMOS33")),
 ]
 
 _leds = [
@@ -159,6 +170,7 @@ class DAC(Module, AutoCSR):
     """Basic first order sigma-delta DAC running at sys clock"""
     def __init__(self, pin, bits):
         self.val = CSRStorage(bits, description='dac output value')
+        self.pin = pin
         accu = Signal(bits+1)
         self.sync += [
             accu.eq(accu[:-1] + self.val.storage),  # clever form of integrator with feedback
@@ -295,6 +307,7 @@ class BaseSoC(SoCCore):
         platform.add_extension(_pwm)
         platform.add_extension(_adc_second_order)
         platform.add_extension(_dac)
+        platform.add_extension(_peltier_driver)
 
 
         # LEDs blinkyblinky :)
@@ -333,7 +346,7 @@ class BaseSoC(SoCCore):
 
         # sigma delta ADC using lame CSR for now
 
-        self.submodules.adc = adc = ADC()
+        self.submodules.adc = adc = ADC(cic_order=5, cic_ratechange=2**22)
 
         adc_in = platform.request("in")
         adc_sd = platform.request("sd", 0)
@@ -362,8 +375,13 @@ class BaseSoC(SoCCore):
         self.submodules.pwm = PWM(platform.request("pwm"), width=32)
         self.add_csr("pwm")
 
-        self.submodules.dac = DAC(platform.request("dac", 1), bits=16)
+        self.submodules.dac = dac = DAC(platform.request("dac", 1), bits=16)
         self.add_csr("dac")
+
+        # using line drivers in parallel as peltier driver
+        self.comb += [
+            Cat([platform.request("pd", i) for i in range(8)]).eq(Cat([dac.pin for i in range(8)]))
+        ]
 
 
 

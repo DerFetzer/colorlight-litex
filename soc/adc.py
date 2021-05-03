@@ -12,7 +12,7 @@ class ADC(Module, AutoCSR):
     """Basic sigma-delta ADC with a CIC decimator running at sys clock.
     The decimator gain is such that the output bitwidth will always be maximized.
     """
-    def __init__(self, cic_order=6, cic_ratechange=2**7, width_o=32):
+    def __init__(self, cic_order=6, cic_ratechange=2**7, width_o=32, clk_div=4):
         self.inp = Signal()         # analog in
         self.sd = Signal()          # sigma-delta switching pin
         self.dout = Signal(width_o)
@@ -26,11 +26,22 @@ class ADC(Module, AutoCSR):
         if not(cic_ratechange & (cic_ratechange-1) == 0) and not cic_ratechange != 0:
             raise ValueError()      # not a power of two
 
+
+        if clk_div != 0:
+            divcnt = Signal(clk_div)
+            self.sync += divcnt.eq(divcnt+1)
+
         b_max = np.ceil(np.log2(cic_ratechange))  # max bit growth
 
-        self.sync += [              # do the sigma-delta
-            self.sd.eq(self.inp)
-        ]
+        if clk_div != 0:
+            self.sync += [
+                If(reduce(and_, divcnt),      # do the sigma-delta
+                    self.sd.eq(self.inp))
+            ]
+        else:
+            self.sync += [              # do the sigma-delta
+                self.sd.eq(self.inp)
+            ]
 
         width = (int(b_max)*cic_order)+1
         sig = Signal((width, True), reset_less=True)

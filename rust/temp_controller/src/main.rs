@@ -199,13 +199,14 @@ fn main() -> ! {
     let mut x = -(1<<25);
 
     loop {
-        // unsafe {let y = iir.tick(x as i32);
-        //     dac.set(y as u32 >> 16);
-        //     // info!("ba: {:?}", adc.read() as i32);
-        //     info!("ba: {:?}", iir.ba);
-        //     info!("xy: {:?}", iir.xy);
-        // }
-        // x += 1000000;
+        unsafe {
+            // let y = iir.tick(x as i32);
+            dac.set((1<<17)-1);
+            info!("adc: {:?}", adc.read() as u32);
+            // info!("ba: {:?}", iir.ba);
+            // info!("xy: {:?}", iir.xy);
+        }
+        x += 1000000;
         msleep(&mut timer, 1000 as u32);
         leds.toggle_mask(0xf);
     }
@@ -243,10 +244,10 @@ fn system_tick() {
     let mut dac = Dac::new(peripherals.DAC);
     let mut adc = Adc::new(peripherals.ADC);
     leds2.on();
-    unsafe {let y = iir.tick(adc.read() as i32);
-        dac.set((y as u32 >> 13)+(1<<15));
-        // dac.set(adc.read() as u32 >> 15 );
-    }
+    // unsafe {let y = iir.tick(adc.read() as i32);
+    //     dac.set((y as u32 >> 13)+(1<<15));
+    //     dac.set(adc.read() as u32 >> 15 );
+    // }
     leds2.off();
     timer2.clr_interrupt();
 }
