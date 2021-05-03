@@ -53,9 +53,19 @@ const SYSTEM_CLOCK_FREQUENCY: u32 = 60_000_000;
 //     xy : [0,0,0,0,0],
 //     }));
 
-static mut IIR: Iir = Iir{
-    ba : [1<<30,1<<30,1<<30,0,0],
-    shift : 30,
+static mut iir: Iir = Iir{
+    // ba : [12190614,-15880203,12190614,138662614,943580235],
+    // shift : 31,
+    // ba : [10926271,-19764559,10926271,67672592,1008157215],
+    // shift : 31,
+    // ba : [283852882,-553640919,283852882,142568885,190173743],
+    // shift : 31,
+    ba : [138600,-270332,138600,69614,92858],
+    shift : 20,
+    // ba : [10691554,-21298801,10691554,13430401,1060395729],
+    // shift : 31,
+    // ba: [1<<10,1<<10,1<<10,1<<10,1<<10],
+    // shift : 12,
     xy : [0,0,0,0,0],
     };
 
@@ -171,7 +181,7 @@ fn main() -> ! {
     let udp_server_handle = socket_set.add(udp_server_socket);
 
     timer2.load(0);
-    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 100_000);
+    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 10_000);
     timer2.enable();
     timer2.en_interrupt();
 
@@ -186,7 +196,17 @@ fn main() -> ! {
 
     info!("Main loop...");
 
+    let mut x = -(1<<25);
+
     loop {
+        // unsafe {let y = iir.tick(x as i32);
+        //     dac.set(y as u32 >> 16);
+        //     // info!("ba: {:?}", adc.read() as i32);
+        //     info!("ba: {:?}", iir.ba);
+        //     info!("xy: {:?}", iir.xy);
+        // }
+        // x += 1000000;
+        msleep(&mut timer, 1000 as u32);
         leds.toggle_mask(0xf);
     }
 }
@@ -223,25 +243,24 @@ fn system_tick() {
     let mut dac = Dac::new(peripherals.DAC);
     let mut adc = Adc::new(peripherals.ADC);
     leds2.on();
-    // interrupt::free(|cs| let y = IIR.borrow(cs).get_mut().tick(timer2.value()));
-    unsafe {let y = IIR.tick(adc.read() as i32);
-        dac.set(y as u32 >> 16);
+    unsafe {let y = iir.tick(adc.read() as i32);
+        dac.set((y as u32 >> 13)+(1<<15));
+        // dac.set(adc.read() as u32 >> 15 );
     }
-    // leds2.on();
     leds2.off();
     timer2.clr_interrupt();
 }
 
-// fn msleep(timer: &mut Timer, leds : &mut Leds, ms: u32) {
-//     timer.disable();
-//
-//     timer.reload(0);
-//     timer.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * ms);
-//
-//     timer.enable();
-//
-//     // Wait until the time has elapsed
-//     while timer.value() > 0 {
-//     }
-//     timer.disable();
-// }
+fn msleep(timer: &mut Timer, ms: u32) {
+    timer.disable();
+
+    timer.reload(0);
+    timer.load(SYSTEM_CLOCK_FREQUENCY / 1_000 * ms);
+
+    timer.enable();
+
+    // Wait until the time has elapsed
+    while timer.value() > 0 {
+    }
+    timer.disable();
+}
