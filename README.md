@@ -6,6 +6,7 @@ Working so far:
 - Ethernet with smoltcp thanks to https://github.com/DerFetzer/colorlight-litex 
 - Interrupts by staring a lot at https://github.com/betrusted-io/xous-core
 - A simple second order sigma-delta ADC using a CIC decimator
+- An IIR filter using on-chip sigma-delta ADC/DAC
 
 ## Credits
 
