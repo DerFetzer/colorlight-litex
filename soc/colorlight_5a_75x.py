@@ -346,7 +346,7 @@ class BaseSoC(SoCCore):
 
         # sigma delta ADC using lame CSR for now
 
-        self.submodules.adc = adc = ADC(cic_order=5, cic_ratechange=2**22)
+        self.submodules.adc = adc = ADC(cic_order=5, cic_ratechange=2**25, clk_div=4)
 
         adc_in = platform.request("in")
         adc_sd = platform.request("sd", 0)

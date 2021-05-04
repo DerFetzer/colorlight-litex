@@ -53,19 +53,28 @@ const SYSTEM_CLOCK_FREQUENCY: u32 = 60_000_000;
 //     xy : [0,0,0,0,0],
 //     }));
 
+static mut set_temp: i32 = 700_000_000;
+static mut err: i32 = 0;
+static mut drive: u32 = 0;
+
 static mut iir: Iir = Iir{
-    // ba : [12190614,-15880203,12190614,138662614,943580235],
+    // ba : [12190614,-15880203,12190614,138662614,943580235],  // lowpass
     // shift : 31,
+
     // ba : [10926271,-19764559,10926271,67672592,1008157215],
     // shift : 31,
     // ba : [283852882,-553640919,283852882,142568885,190173743],
     // shift : 31,
-    ba : [138600,-270332,138600,69614,92858],
-    shift : 20,
+
+    // ba : [138600,-270332,138600,69614,92858],       // highpass
+    // shift : 20,
+
     // ba : [10691554,-21298801,10691554,13430401,1060395729],
     // shift : 31,
-    // ba: [1<<10,1<<10,1<<10,1<<10,1<<10],
+    // ba: [1<<12,0,0,0,0],
     // shift : 12,
+    ba: [736909014,736184239,0,-1072668083,0],        // maybe PI controller?
+    shift : 31,
     xy : [0,0,0,0,0],
     };
 
@@ -93,6 +102,8 @@ mod mock {
         }
     }
 }
+
+
 
 // This is the entry point for the application.
 // It is not allowed to return.
@@ -181,7 +192,7 @@ fn main() -> ! {
     let udp_server_handle = socket_set.add(udp_server_socket);
 
     timer2.load(0);
-    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 10_000);
+    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 5);
     timer2.enable();
     timer2.en_interrupt();
 
@@ -196,19 +207,74 @@ fn main() -> ! {
 
     info!("Main loop...");
 
-    let mut x = -(1<<25);
+
 
     loop {
-        unsafe {
-            // let y = iir.tick(x as i32);
-            dac.set((1<<17)-1);
-            info!("adc: {:?}", adc.read() as u32);
-            // info!("ba: {:?}", iir.ba);
-            // info!("xy: {:?}", iir.xy);
+        match iface.poll(&mut socket_set, clock.elapsed()) {
+            Ok(_) => {}
+            Err(e) => {
+                debug!("Poll error: {}", e);
+            }
         }
-        x += 1000000;
-        msleep(&mut timer, 1000 as u32);
-        leds.toggle_mask(0xf);
+
+        {
+            let mut socket = socket_set.get::<TcpSocket>(tcp_server_handle);
+
+            if !socket.is_active() && !socket.is_listening() {
+                info!("Start listen...");
+                socket.listen(1234).unwrap();
+            }
+
+            if socket.can_send() {
+                // info!("Can send...");
+                unsafe{
+                    info!("adc:\t{:?}", adc.read() as u32);
+                    info!("error:\t{:?}", err as i32);
+                    info!("drive:\t{:?}", drive as i32);
+                }
+                // socket.send_slice(b"Hello World!\r\n").unwrap();
+                let adcval: u32 = adc.read();
+                socket.send_slice(&adcval.to_be_bytes()).unwrap();
+            }
+        }
+
+        {
+            let mut socket = socket_set.get::<UdpSocket>(udp_server_handle);
+            if !socket.is_open() {
+                socket.bind(5678).unwrap()
+            }
+
+            match socket.recv() {
+                Ok((data, endpoint)) => {
+
+                    let data4 = [data[0]-48,data[1]-48,data[2]-48,data[3]-48];
+                    let val = as_u32_be(&data4);
+                    unsafe{ set_temp = val as i32;}
+                    info!("udp:5678 data/value received: {:?}/{} from {}", data, val,endpoint);
+                }
+                Err(_) => debug!("Err"),
+            };
+        }
+
+        match iface.poll_delay(&socket_set, clock.elapsed()) {
+            Some(Duration { millis: 0 }) => {}
+            Some(delay) => {
+                trace!("sleeping for {} ms", delay);
+                msleep(&mut timer, delay.total_millis() as u32);
+                clock.advance(delay)
+            }
+            None => clock.advance(Duration::from_millis(1)),
+        }
+        trace!("Clock elapsed: {}", clock.elapsed());
+        // unsafe {
+        //     // let y = iir.tick(x as i32);
+        //     // dac.set((1<<17)-1);
+        //     info!("adc: {:?}", adc.read() as u32);
+        //     // info!("ba: {:?}", iir.ba);
+        //     // info!("xy: {:?}", iir.xy);
+        // }
+        // msleep(&mut timer, 1000 as u32);
+        // leds.toggle_mask(0xf);
     }
 }
 
@@ -221,7 +287,7 @@ fn MachineExternal() {
         if irqs_pending & (1 << irq_no) != 0 {
             match isr_to_interrupt(irq_no) {
                 Some(1) => system_tick(),
-                _ => {} //unsafe{vmim::write(vmim::read() ^ (1<<irq_no))} // disable non-impl. interrupt
+                _ => unsafe{vmim::write(vmim::read() ^ (1<<irq_no))} // disable non-impl. interrupt
             }
         }
     }
@@ -244,10 +310,21 @@ fn system_tick() {
     let mut dac = Dac::new(peripherals.DAC);
     let mut adc = Adc::new(peripherals.ADC);
     leds2.on();
-    // unsafe {let y = iir.tick(adc.read() as i32);
-    //     dac.set((y as u32 >> 13)+(1<<15));
-    //     dac.set(adc.read() as u32 >> 15 );
-    // }
+    unsafe {
+        err = set_temp - (adc.read() as i32);
+        let y = iir.tick(err);
+        if y < 0{
+            drive = 0;
+        } else {
+            drive = (y as u32 >> 9);
+        }
+        // drive = (y as u32 >> 15);
+        if drive > (1<<16) {
+            drive = (1 << 16) - 1;
+        }
+        dac.set(drive);
+        // dac.set(adc.read() as u32 >> 15 );
+    }
     leds2.off();
     timer2.clr_interrupt();
 }
@@ -264,4 +341,18 @@ fn msleep(timer: &mut Timer, ms: u32) {
     while timer.value() > 0 {
     }
     timer.disable();
+}
+
+fn as_u32_be(array: &[u8; 4]) -> u32 {
+    ((array[0] as u32) << 24) +
+    ((array[1] as u32) << 16) +
+    ((array[2] as u32) <<  8) +
+    ((array[3] as u32) <<  0)
+}
+
+fn as_u32_le(array: &[u8; 4]) -> u32 {
+    ((array[0] as u32) <<  0) +
+    ((array[1] as u32) <<  8) +
+    ((array[2] as u32) << 16) +
+    ((array[3] as u32) << 24)
 }

@@ -12,7 +12,7 @@ class ADC(Module, AutoCSR):
     """Basic sigma-delta ADC with a CIC decimator running at sys clock.
     The decimator gain is such that the output bitwidth will always be maximized.
     """
-    def __init__(self, cic_order=6, cic_ratechange=2**7, width_o=32, clk_div=4):
+    def __init__(self, cic_order=6, cic_ratechange=2**7, width_o=32, clk_div=0):
         self.inp = Signal()         # analog in
         self.sd = Signal()          # sigma-delta switching pin
         self.dout = Signal(width_o)
