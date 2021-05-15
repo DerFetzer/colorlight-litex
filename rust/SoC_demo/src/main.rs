@@ -10,28 +10,22 @@ use riscv_rt::entry;
 use riscv::register::{mcause, mie, mstatus};
 use vexriscv::register::{vdci, vmim, vmip, vsim, vsip};
 
-use riscv::interrupt::{self, Mutex};
+use riscv::interrupt::{self};
 use core::cell::Cell;
 
-mod adc;
 mod ethernet;
 mod gpio;
 mod leds;
 mod print;
 mod pwm;
 mod timer;
-mod iir;
-mod dac;
 
 use crate::ethernet::Eth;
-use adc::Adc;
 use gpio::Gpio;
 use leds::{Leds, Leds2};
 use pwm::Pwm;
 use timer::{Timer, Timer2};
-use dac::Dac;
 
-use iir::Iir;
 
 use managed::ManagedSlice;
 use smoltcp::iface::{EthernetInterfaceBuilder, NeighborCache};
@@ -45,39 +39,6 @@ use crate::print::UartLogger;
 use log::{debug, info, trace};
 
 const SYSTEM_CLOCK_FREQUENCY: u32 = 60_000_000;
-
-
-// static IIR: Mutex<Cell<Iir>> =  Mutex::new(Cell::new(Iir{
-//     ba : [1<<30,1<<30,1<<30,0,0],
-//     shift : 30,
-//     xy : [0,0,0,0,0],
-//     }));
-
-static mut set_temp: i32 = 700_000_000;
-static mut err: i32 = 0;
-static mut drive: u32 = 0;
-
-static mut iir: Iir = Iir{
-    // ba : [12190614,-15880203,12190614,138662614,943580235],  // lowpass
-    // shift : 31,
-
-    // ba : [10926271,-19764559,10926271,67672592,1008157215],
-    // shift : 31,
-    // ba : [283852882,-553640919,283852882,142568885,190173743],
-    // shift : 31,
-
-    // ba : [138600,-270332,138600,69614,92858],       // highpass
-    // shift : 20,
-
-    // ba : [10691554,-21298801,10691554,13430401,1060395729],
-    // shift : 31,
-    // ba: [1<<12,0,0,0,0],
-    // shift : 12,
-    ba: [736909014,736184239,0,-1072668083,0],        // maybe PI controller?
-    shift : 31,
-    xy : [0,0,0,0,0],
-    };
-
 
 
 
@@ -123,13 +84,9 @@ fn main() -> ! {
     let mut leds = Leds::new(peripherals.LEDS);
     let mut leds2 = Leds2::new(peripherals.LEDS2);
 
-    let mut adc = Adc::new(peripherals.ADC);
-
     let mut gpio = Gpio::new(peripherals.GPIO);
 
     let mut pwm = Pwm::new(peripherals.PWM);
-
-    let mut dac = Dac::new(peripherals.DAC);
 
     let clock = mock::Clock::new();
     let device = Eth::new(peripherals.ETHMAC, peripherals.ETHMEM);
@@ -228,13 +185,9 @@ fn main() -> ! {
             if socket.can_send() {
                 // info!("Can send...");
                 unsafe{
-                    info!("adc:\t{:?}", adc.read() as u32);
-                    info!("error:\t{:?}", err as i32);
-                    info!("drive:\t{:?}", drive as i32);
+                    socket.send_slice(b"Hello World!\r\n").unwrap();
+                    info!("Hello World");
                 }
-                // socket.send_slice(b"Hello World!\r\n").unwrap();
-                let adcval: u32 = adc.read();
-                socket.send_slice(&adcval.to_be_bytes()).unwrap();
             }
         }
 
@@ -246,11 +199,7 @@ fn main() -> ! {
 
             match socket.recv() {
                 Ok((data, endpoint)) => {
-
-                    let data4 = [data[0]-48,data[1]-48,data[2]-48,data[3]-48];
-                    let val = as_u32_be(&data4);
-                    unsafe{ set_temp = val as i32;}
-                    info!("udp:5678 data/value received: {:?}/{} from {}", data, val,endpoint);
+                    info!("Hello World");
                 }
                 Err(_) => debug!("Err"),
             };
@@ -266,15 +215,6 @@ fn main() -> ! {
             None => clock.advance(Duration::from_millis(1)),
         }
         trace!("Clock elapsed: {}", clock.elapsed());
-        // unsafe {
-        //     // let y = iir.tick(x as i32);
-        //     // dac.set((1<<17)-1);
-        //     info!("adc: {:?}", adc.read() as u32);
-        //     // info!("ba: {:?}", iir.ba);
-        //     // info!("xy: {:?}", iir.xy);
-        // }
-        // msleep(&mut timer, 1000 as u32);
-        // leds.toggle_mask(0xf);
     }
 }
 
@@ -286,7 +226,7 @@ fn MachineExternal() {
     for irq_no in 0..32 {
         if irqs_pending & (1 << irq_no) != 0 {
             match isr_to_interrupt(irq_no) {
-                Some(1) => system_tick(),
+                Some(0) => system_tick(),
                 _ => unsafe{vmim::write(vmim::read() ^ (1<<irq_no))} // disable non-impl. interrupt
             }
         }
@@ -294,9 +234,8 @@ fn MachineExternal() {
 }
 
 pub fn isr_to_interrupt(isr: u8) -> Option<u8> {
-    if isr == (litex_pac::Interrupt::TIMER2 as u8) {
-        return Some(1);
-    }
+    if isr == (litex_pac::Interrupt::TIMER2 as u8) {return Some(0)}
+    if isr == (litex_pac::Interrupt::GPIO as u8) {return Some(1)}
 
     None
 }
@@ -307,24 +246,8 @@ fn system_tick() {
     let peripherals = unsafe { litex_pac::Peripherals::steal() }; // steal all but only use the safe ones ;)
     let mut timer2 = Timer2::new(peripherals.TIMER2);
     let mut leds2 = Leds2::new(peripherals.LEDS2);
-    let mut dac = Dac::new(peripherals.DAC);
-    let mut adc = Adc::new(peripherals.ADC);
     leds2.on();
-    unsafe {
-        err = set_temp - (adc.read() as i32);
-        let y = iir.tick(err);
-        if y < 0{
-            drive = 0;
-        } else {
-            drive = (y as u32 >> 9);
-        }
-        // drive = (y as u32 >> 15);
-        if drive > (1<<16) {
-            drive = (1 << 16) - 1;
-        }
-        dac.set(drive);
-        // dac.set(adc.read() as u32 >> 15 );
-    }
+
     leds2.off();
     timer2.clr_interrupt();
 }
