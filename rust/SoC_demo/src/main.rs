@@ -103,6 +103,8 @@ fn main() -> ! {
         .ip_addrs(ip_addrs)
         .finalize();
 
+    let mut data = [0;128];
+
     let tcp_server_socket = {
         // It is not strictly necessary to use a `static mut` and unsafe code here, but
         // on embedded systems that smoltcp targets it is far better to allocate the data
@@ -176,19 +178,36 @@ fn main() -> ! {
 
         {
             let mut socket = socket_set.get::<TcpSocket>(tcp_server_handle);
+            let mut yay = false;
 
             if !socket.is_active() && !socket.is_listening() {
                 info!("Start listen...");
                 socket.listen(1234).unwrap();
             }
 
-            if socket.can_send() {
-                // info!("Can send...");
-                unsafe{
-                    socket.send_slice(b"Hello World!\r\n").unwrap();
-                    info!("Hello World");
-                }
+            else if socket.can_send() && socket.can_recv() {
+                let bytes_rcvd = socket.recv_slice(&mut data);
+                info!("bytes rcvd: {:?}", bytes_rcvd.unwrap());
+                socket.send_slice(&data).unwrap();
+                if(data[0]=='h' as u8 && data[1]=='i' as u8) {yay = true;};
+                for elem in data.iter_mut() { *elem = 0; }
             }
+            if socket.can_send() {
+                if(yay){
+                    socket.send_slice(b"Horrayy!\r\n").unwrap();
+                    yay = false;
+                }
+
+            }
+
+
+            // if socket.can_send() {
+            //     // info!("Can send...");
+            //     unsafe{
+            //         socket.send_slice(b"Hello World!\r\n").unwrap();
+            //         info!("Hello World");
+            //     }
+            // }
         }
 
         {
