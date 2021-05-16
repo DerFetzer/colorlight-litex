@@ -315,13 +315,15 @@ class BaseSoC(SoCCore):
         self.submodules.leds = Leds(Cat(
             platform.request("r"),
             platform.request("y"),
-            platform.request("g")
+            platform.request("g"),
+            platform.request("user_led_n"),
             ),
-            led_polarity=0x00,
+            led_polarity=0x8,
             led_name=[
                 ["r", "The Red LED."],
                 ["y", "The Yellow LED."],
-                ["g", "The Green Red LED."]
+                ["g", "The Green Red LED."],
+                ["user_led_n", "The onboard LED."]
                 ])
 
         self.add_csr("leds")
@@ -340,30 +342,6 @@ class BaseSoC(SoCCore):
 
         self.add_csr("leds2")
 
-
-
-
-
-        # sigma delta ADC using lame CSR for now
-
-        self.submodules.adc = adc = ADC(cic_order=5, cic_ratechange=2**25, clk_div=4)
-
-        adc_in = platform.request("in")
-        adc_sd = platform.request("sd", 0)
-        adc_sd2 = platform.request("sd", 1)
-        #p5v = platform.request("p5v")
-        p3v = platform.request("p3v")
-
-        self.comb += [
-            adc.inp.eq(adc_in),
-            adc_sd.eq(adc.sd),
-            adc_sd2.eq(adc.sd),
-            #p5v.eq(1),
-            p3v.eq(1),
-        ]
-
-        self.add_csr("adc")
-
         self.submodules.gpio = gpio = GPIOIn(platform.request("user_btn_n", 0), with_irq=True)
         self.add_csr("gpio")
         self.add_interrupt("gpio")
@@ -375,13 +353,7 @@ class BaseSoC(SoCCore):
         self.submodules.pwm = PWM(platform.request("pwm"), width=32)
         self.add_csr("pwm")
 
-        self.submodules.dac = dac = DAC(platform.request("dac", 1), bits=16)
-        self.add_csr("dac")
 
-        # using line drivers in parallel as peltier driver
-        self.comb += [
-            Cat([platform.request("pd", i) for i in range(8)]).eq(Cat([dac.pin for i in range(8)]))
-        ]
 
 
 

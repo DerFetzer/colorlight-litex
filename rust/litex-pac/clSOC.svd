@@ -1017,6 +1017,13 @@ register to disable individual events.]]></description>
                             <lsb>2</lsb>
                             <description><![CDATA[The Green Red LED.]]></description>
                         </field>
+                        <field>
+                            <name>user_led_n</name>
+                            <msb>3</msb>
+                            <bitRange>[3:3]</bitRange>
+                            <lsb>3</lsb>
+                            <description><![CDATA[The onboard LED.]]></description>
+                        </field>
                     </fields>
                 </register>
             </registers>
@@ -1068,35 +1075,8 @@ register to disable individual events.]]></description>
             </addressBlock>
         </peripheral>
         <peripheral>
-            <name>ADC</name>
-            <baseAddress>0xF0006000</baseAddress>
-            <groupName>ADC</groupName>
-            <registers>
-                <register>
-                    <name>ADC_VALUE</name>
-                    <description><![CDATA[adc conversion value (continuously updated)]]></description>
-                    <addressOffset>0x0000</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>adc_value</name>
-                            <msb>31</msb>
-                            <bitRange>[31:0]</bitRange>
-                            <lsb>0</lsb>
-                        </field>
-                    </fields>
-                </register>
-            </registers>
-            <addressBlock>
-                <offset>0</offset>
-                <size>0x4</size>
-                <usage>registers</usage>
-            </addressBlock>
-        </peripheral>
-        <peripheral>
             <name>GPIO</name>
-            <baseAddress>0xF0006800</baseAddress>
+            <baseAddress>0xF0006000</baseAddress>
             <groupName>GPIO</groupName>
             <registers>
                 <register>
@@ -1193,7 +1173,7 @@ register to disable individual events.]]></description>
         </peripheral>
         <peripheral>
             <name>TIMER2</name>
-            <baseAddress>0xF0007000</baseAddress>
+            <baseAddress>0xF0006800</baseAddress>
             <groupName>TIMER2</groupName>
             <registers>
                 <register>
@@ -1339,7 +1319,7 @@ register to disable individual events.]]></description>
         </peripheral>
         <peripheral>
             <name>PWM</name>
-            <baseAddress>0xF0007800</baseAddress>
+            <baseAddress>0xF0007000</baseAddress>
             <groupName>PWM</groupName>
             <registers>
                 <register>
@@ -1376,33 +1356,6 @@ register to disable individual events.]]></description>
             <addressBlock>
                 <offset>0</offset>
                 <size>0x8</size>
-                <usage>registers</usage>
-            </addressBlock>
-        </peripheral>
-        <peripheral>
-            <name>DAC</name>
-            <baseAddress>0xF0008000</baseAddress>
-            <groupName>DAC</groupName>
-            <registers>
-                <register>
-                    <name>VAL</name>
-                    <description><![CDATA[dac output value]]></description>
-                    <addressOffset>0x0000</addressOffset>
-                    <resetValue>0x00</resetValue>
-                    <size>32</size>
-                    <fields>
-                        <field>
-                            <name>val</name>
-                            <msb>15</msb>
-                            <bitRange>[15:0]</bitRange>
-                            <lsb>0</lsb>
-                        </field>
-                    </fields>
-                </register>
-            </registers>
-            <addressBlock>
-                <offset>0</offset>
-                <size>0x4</size>
                 <usage>registers</usage>
             </addressBlock>
         </peripheral>
@@ -1525,7 +1478,7 @@ register to disable individual events.]]></description>
             </memoryRegion>
         </memoryRegions>
         <constants>
-            <constant name="CONFIG_CLOCK_FREQUENCY" value="50000000" />
+            <constant name="CONFIG_CLOCK_FREQUENCY" value="60000000" />
             <constant name="CONFIG_CPU_HAS_INTERRUPT" value="None" />
             <constant name="CONFIG_CPU_RESET_ADDR" value="537919488" />
             <constant name="CONFIG_CPU_TYPE_VEXRISCV" value="None" />

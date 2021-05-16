@@ -40,6 +40,8 @@ use log::{debug, info, trace};
 
 const SYSTEM_CLOCK_FREQUENCY: u32 = 60_000_000;
 
+static mut interrupted:bool = false;
+// state of the button interrupt. static mut allows (unsafe) communication between main and irq.
 
 
 mod mock {
@@ -151,12 +153,16 @@ fn main() -> ! {
     let udp_server_handle = socket_set.add(udp_server_socket);
 
     timer2.load(0);
-    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 5);
+    timer2.reload(SYSTEM_CLOCK_FREQUENCY / 2);
     timer2.enable();
     timer2.en_interrupt();
 
     pwm.set_period(1 << 15);
     pwm.set_value(1 << 13);
+
+    gpio.set_interrupt_polarity(true);
+    gpio.en_interrupt();
+
 
     unsafe {
         vmim::write(0xFFFF_FFFF); // 1010 for timer and gpio
@@ -189,25 +195,43 @@ fn main() -> ! {
                 let bytes_rcvd = socket.recv_slice(&mut data);
                 info!("bytes rcvd: {:?}", bytes_rcvd.unwrap());
                 socket.send_slice(&data).unwrap();
-                if(data[0]=='h' as u8 && data[1]=='i' as u8) {yay = true;};
-                for elem in data.iter_mut() { *elem = 0; }
-            }
-            if socket.can_send() {
-                if(yay){
-                    socket.send_slice(b"Horrayy!\r\n").unwrap();
-                    yay = false;
+
+                if(&data[0..3] == "hi\n".as_bytes()) {socket.send_slice(b"Horrayy! :)\r\n").unwrap();}
+
+                else if(&data[0..7] == "led on\n".as_bytes()) {
+                    leds.on();
+                    info!("turned led on");
+                }
+                else if(&data[0..8] == "led off\n".as_bytes()) {
+                    leds.off();
+                    info!("turned led off");
+                }
+                else if(&data[0..15] == "tell me a joke\n".as_bytes()) {
+                    socket.send_slice(b"Was machen die Pilze auf der Pizza? Als Belag funghieren. Ha.\r\n").unwrap();
+                }
+                else if(&data[0..7] == "set pwm".as_bytes()) {
+                    let value = as_u32_be(&data[9..13]);
+                    pwm.set_value(value);
+                    socket.send_slice(b"set pwm value.\r\n").unwrap();
+                    info!("set pwm value to {}", value);
+                }
+                else {
+                    socket.send_slice(b"I didn't understand, sorry...\r\n").unwrap();
+                    info!("wtf is this other computer talking about??");
                 }
 
+                for elem in data.iter_mut() { *elem = 0; }
             }
 
-
-            // if socket.can_send() {
-            //     // info!("Can send...");
-            //     unsafe{
-            //         socket.send_slice(b"Hello World!\r\n").unwrap();
-            //         info!("Hello World");
-            //     }
-            // }
+            if socket.can_send() {
+                unsafe {
+                    if interrupted {
+                        socket.send_slice(b"Someone pressed my Button!\r\n").unwrap();
+                        info!("interrupt noticed");
+                        interrupted=false;
+                    }
+                }
+            }
         }
 
         {
@@ -246,6 +270,7 @@ fn MachineExternal() {
         if irqs_pending & (1 << irq_no) != 0 {
             match isr_to_interrupt(irq_no) {
                 Some(0) => system_tick(),
+                Some(1) => button_irq(),
                 _ => unsafe{vmim::write(vmim::read() ^ (1<<irq_no))} // disable non-impl. interrupt
             }
         }
@@ -265,11 +290,18 @@ fn system_tick() {
     let peripherals = unsafe { litex_pac::Peripherals::steal() }; // steal all but only use the safe ones ;)
     let mut timer2 = Timer2::new(peripherals.TIMER2);
     let mut leds2 = Leds2::new(peripherals.LEDS2);
-    leds2.on();
-
-    leds2.off();
+    leds2.toggle();
     timer2.clr_interrupt();
 }
+
+fn button_irq() {
+    let peripherals = unsafe { litex_pac::Peripherals::steal() }; // steal all but only use the safe ones ;)
+
+    let mut gpio = Gpio::new(peripherals.GPIO);
+    gpio.clr_interrupt();
+    unsafe {interrupted = true};
+}
+
 
 fn msleep(timer: &mut Timer, ms: u32) {
     timer.disable();
@@ -285,14 +317,15 @@ fn msleep(timer: &mut Timer, ms: u32) {
     timer.disable();
 }
 
-fn as_u32_be(array: &[u8; 4]) -> u32 {
+
+fn as_u32_be(array: &[u8]) -> u32 {
     ((array[0] as u32) << 24) +
     ((array[1] as u32) << 16) +
     ((array[2] as u32) <<  8) +
     ((array[3] as u32) <<  0)
 }
 
-fn as_u32_le(array: &[u8; 4]) -> u32 {
+fn as_u32_le(array: &[u8]) -> u32 {
     ((array[0] as u32) <<  0) +
     ((array[1] as u32) <<  8) +
     ((array[2] as u32) << 16) +

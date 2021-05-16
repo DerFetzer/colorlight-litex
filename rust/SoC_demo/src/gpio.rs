@@ -26,7 +26,7 @@ impl Gpio {
 
     pub fn en_interrupt(&mut self) {
         unsafe {
-            self.registers.ev_enable.write(|w| w.bits(0xffff));
+            self.registers.ev_enable.write(|w| w.bits(0xFFFF_FFFF));
         }
     }
 
@@ -41,18 +41,7 @@ impl Gpio {
             self.registers.ev_enable.write(|w| w.bits(0));
         }
     }
-
-    pub fn ev_pending(&mut self) -> u32 {
-        self.registers.ev_pending.read().bits()
-    }
-
-    pub fn ev_status(&mut self) -> u32 {
-        self.registers.ev_status.read().bits()
-    }
-
-    pub fn ev_enable(&mut self) -> u32 {
-        self.registers.ev_enable.read().bits()
-    }
+    
 }
 
 // pub struct Gpio2 {
