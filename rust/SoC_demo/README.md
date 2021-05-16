@@ -43,7 +43,7 @@ rlwrap nc -vv 192.168.1.50 1234
 
 ```
 
-Now you should have a TCP connection with the SoC and you can talk to it. For example just type "hi" and press enter. Or "led on". If you press the button, you should get a "button pressed" message via TCP. Have a look at main.rs to see which commands the SoC can parse.
+Now you should have a TCP connection with the SoC and you can talk to it. For example just type "hi" and press enter. Or "led on". If you press the button on the board, you should get a "button pressed" message via TCP. Have a look at main.rs to see which commands the SoC can parse.
 
 
 
