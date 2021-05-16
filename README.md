@@ -15,7 +15,7 @@ Most of the instructions are adapted from https://github.com/DerFetzer/colorligh
 python3 colorlight_5a_75x.py  --flash --board=5a-75b --revision=7.0 --with-ethernet --sys-clk-freq 60e6
 
 ```
-4. Follow the instructions in [eth_demo][eth_demo] to build the software.
+4. Follow the instructions in [SoC_demo][SoC_demo] to build the software.
 
 
 There are a few things added to the standard Colorlight 5A-75B. If you just want to try the SoC with one onboard LED, the onboard button and just the TX of the UART you do not need to modify anything. 
