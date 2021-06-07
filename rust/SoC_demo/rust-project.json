@@ -1,0 +1,4 @@
+{
+    "rust.target": "riscv32imac-unknown-none-elf",
+    "rust.all_targets": false
+}
