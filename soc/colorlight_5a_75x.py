@@ -26,6 +26,8 @@ from litex.soc.integration.soc_core import SoCCore
 from litex.soc.integration.builder import Builder, builder_argdict, builder_args
 from litex.soc.integration.soc_core import soc_core_argdict, soc_core_args
 from litex.soc.interconnect.csr import AutoCSR, CSRStorage, CSRStatus, CSRField
+from litex.soc.integration.doc import AutoDoc, ModuleDoc
+from litex.soc.cores.timer import Timer
 
 from litex.build.generic_platform import *
 
@@ -37,6 +39,12 @@ from litex.soc.cores.uart import UARTWishboneBridge
 
 import litex.soc.doc as lxsocdoc
 
+from adc import ADC
+from leds import Leds
+from pwm import PWM
+
+from litex.soc.cores.gpio import GPIOIn
+
 
 class ECP5Programmer(GenericProgrammer):
     needs_bitreverse = False
@@ -46,6 +54,63 @@ class ECP5Programmer(GenericProgrammer):
 
     def load_bitstream(self, bitstream_file):
         subprocess.call(["ecpprog", "-S", bitstream_file])
+
+
+# My IOs -------------------------------------------------------------------------------------------
+
+
+_myserial = [
+    ("myserial", 0,
+         Subsignal("tx", Pins("j1:14")),
+         Subsignal("rx", Pins("j1:13")),
+         IOStandard("LVCMOS33")
+     )
+]
+
+_dac = [
+    ("dac", 0, Pins("j4:0"), IOStandard("LVCMOS33")),
+    ("dac", 1, Pins("j4:1"), IOStandard("LVCMOS33")),       # sigma-delta dac output
+]
+
+_peltier_driver = [
+    ("pd", 0, Pins("j3:0"), IOStandard("LVCMOS33")),
+    ("pd", 1, Pins("j3:1"), IOStandard("LVCMOS33")),
+    ("pd", 2, Pins("j3:2"), IOStandard("LVCMOS33")),
+    ("pd", 3, Pins("j3:4"), IOStandard("LVCMOS33")),
+    ("pd", 4, Pins("j2:2"), IOStandard("LVCMOS33")),
+    ("pd", 5, Pins("j2:4"), IOStandard("LVCMOS33")),
+    ("pd", 6, Pins("j2:5"), IOStandard("LVCMOS33")),
+    ("pd", 7, Pins("j2:6"), IOStandard("LVCMOS33")),
+]
+
+_pwm = [
+    ("pwm", 0, Pins("j2:0"), IOStandard("LVCMOS33")),
+]
+
+_leds = [
+    ("g", 0, Pins("j6:5"), IOStandard("LVCMOS33")),
+    ("r", 0, Pins("j6:10"), IOStandard("LVCMOS33")),        # Not really here but there is congestion with the pins otherwise..
+    ("y", 0, Pins("j6:9"), IOStandard("LVCMOS33")),
+    ("g1", 0, Pins("j7:1"), IOStandard("LVCMOS33")),
+    ("r1", 0, Pins("j7:0"), IOStandard("LVCMOS33")),
+    ("y1", 0, Pins("j7:2"), IOStandard("LVCMOS33")),
+]
+
+_adc_first_order = [
+    ("in", 0, Pins("j1:1"), IOStandard("LVDS")),
+    ("sd", 0, Pins("j1:2"), IOStandard("LVCMOS33")),        # sigma delta out
+    ("p3v", 0, Pins("j1:0"), IOStandard("LVCMOS33")),      # this will make 3V on the connector
+    ("p5v", 0, Pins("j1:14"), IOStandard("LVCMOS33")),      # this will make 5V on the connector bc buffer IC
+]
+
+_adc_second_order = [
+    ("in", 0, Pins("j1:1"), IOStandard("LVDS")),
+    ("sd", 0, Pins("j1:5"), IOStandard("LVCMOS33")),        # sigma delta out
+    ("sd", 1, Pins("j1:7"), IOStandard("LVCMOS33")),        # sigma delta out (copy of first)
+    ("p3v", 0, Pins("j1:0"), IOStandard("LVCMOS33")),      # this will make 3V on the connector
+    ("p5v", 0, Pins("j1:14"), IOStandard("LVCMOS33")),      # this will make 5V on the connector bc buffer IC
+]
+
 
 
 # CRG ----------------------------------------------------------------------------------------------
@@ -101,6 +166,19 @@ class _CRG(Module):
         self.specials += DDROutput(1, 0, platform.request("sdram_clock"), sdram_clk)
 
 
+class DAC(Module, AutoCSR):
+    """Basic first order sigma-delta DAC running at sys clock"""
+    def __init__(self, pin, bits):
+        self.val = CSRStorage(bits, description='dac output value')
+        self.pin = pin
+        accu = Signal(bits+1)
+        self.sync += [
+            accu.eq(accu[:-1] + self.val.storage),  # clever form of integrator with feedback
+            pin.eq(accu[-1])
+        ]
+
+
+
 # BaseSoC ------------------------------------------------------------------------------------------
 
 class BaseSoC(SoCCore):
@@ -132,6 +210,9 @@ class BaseSoC(SoCCore):
         if board == "5a-75e" and revision == "6.0" and (with_etherbone or with_ethernet):
             assert use_internal_osc, "You cannot use the 25MHz clock as system clock since it is provided by the Ethernet PHY and will stop during PHY reset."
 
+        # add custom serial port ios
+        platform.add_extension(_myserial)
+
         # Set cpu name and variant defaults when none are provided
         if "cpu_variant" not in kwargs:
             if debug:
@@ -147,6 +228,9 @@ class BaseSoC(SoCCore):
         # Set CPU reset address
         kwargs["cpu_reset_address"] = self.mem_map["spiflash"] + flash_offset
 
+        # defaul uart myserial
+        kwargs["uart_name"] = "myserial"
+
         # Select "crossover" as soc uart instead of "serial"
         # We have to make that selection before calling the parent initializer
         if debug:
@@ -158,7 +242,7 @@ class BaseSoC(SoCCore):
             ident_version  = True,
             **kwargs)
 
-        with_rst = kwargs["uart_name"] not in ["serial", "bridge", "crossover"] # serial_rx shared with user_btn_n.
+        with_rst = False # kwargs["uart_name"] not in ["serial", "bridge", "crossover"] # serial_rx shared with user_btn_n.
         with_usb_pll = kwargs.get("uart_name", None) == "usb_acm"
         self.submodules.crg = _CRG(platform, sys_clk_freq, use_internal_osc=use_internal_osc, with_usb_pll=with_usb_pll, with_rst=with_rst, sdram_rate=sdram_rate)
 
@@ -202,9 +286,15 @@ class BaseSoC(SoCCore):
 
         # Ethernet / Etherbone ---------------------------------------------------------------------
         if with_ethernet or with_etherbone:
-            self.submodules.ethphy = LiteEthPHYRGMII(
-                clock_pads = self.platform.request("eth_clocks", eth_phy),
-                pads       = self.platform.request("eth", eth_phy))
+            if board == "5a-75b" and revision == "7.0":
+                self.submodules.ethphy = LiteEthPHYRGMII(
+                    clock_pads = self.platform.request("eth_clocks", eth_phy),
+                    pads       = self.platform.request("eth", eth_phy),
+                    tx_delay   = 0e-9)
+            else:
+                self.submodules.ethphy = LiteEthPHYRGMII(
+                    clock_pads = self.platform.request("eth_clocks", eth_phy),
+                    pads       = self.platform.request("eth", eth_phy))
             self.add_csr("ethphy")
             if with_ethernet:
                 self.add_ethernet(phy=self.ethphy)
@@ -212,11 +302,75 @@ class BaseSoC(SoCCore):
                 self.add_etherbone(phy=self.ethphy)
 
 
+        # add IO extentions
+        platform.add_extension(_leds)
+        platform.add_extension(_pwm)
+        platform.add_extension(_adc_second_order)
+        platform.add_extension(_dac)
+        platform.add_extension(_peltier_driver)
+
+
+        # LEDs blinkyblinky :)
+
+        self.submodules.leds = Leds(Cat(
+            platform.request("r"),
+            platform.request("y"),
+            platform.request("g"),
+            platform.request("user_led_n"),
+            ),
+            led_polarity=0x8,
+            led_name=[
+                ["r", "The Red LED."],
+                ["y", "The Yellow LED."],
+                ["g", "The Green Red LED."],
+                ["user_led_n", "The onboard LED."]
+                ])
+
+        self.add_csr("leds")
+
+        self.submodules.leds2 = Leds(Cat(
+            platform.request("r1"),
+            platform.request("y1"),
+            platform.request("g1")
+            ),
+            led_polarity=0x00,
+            led_name=[
+                ["r1", "The second Red LED."],
+                ["y1", "The second Yellow LED."],
+                ["g1", "The second Green Red LED."]
+                ])
+
+        self.add_csr("leds2")
+
+        self.submodules.gpio = gpio = GPIOIn(platform.request("user_btn_n", 0), with_irq=True)
+        self.add_csr("gpio")
+        self.add_interrupt("gpio")
+
+        self.submodules.timer2 = Timer()
+        self.add_csr("timer2")
+        self.add_interrupt("timer2")
+
+        self.submodules.pwm = PWM(platform.request("pwm"), width=32)
+        self.add_csr("pwm")
+
+
+
+
+
+
 # Helper functions ---------------------------------------------------------------------------------
 
 def modify_svd(builder_kwargs):
     # Add Ethernet buffer peripheral to svd
     with open(builder_kwargs["csr_svd"], "r") as f:
+        line_number = 0
+        for l in f:         # search for the right place to insert
+            line_number += 1
+            if """</peripherals>""" in l:
+                line = line_number
+        print("inserting before line:")
+        print(line)
+        f.seek(0)
         s = f.readlines()
     registers = """        <peripheral>
             <name>ETHMEM</name>
@@ -303,7 +457,7 @@ def modify_svd(builder_kwargs):
             </addressBlock>
         </peripheral>
     """
-    s.insert(-2, registers)
+    s.insert(line-1, registers)
     with open(builder_kwargs["csr_svd"], "w") as f:
         f.writelines(s)
 
