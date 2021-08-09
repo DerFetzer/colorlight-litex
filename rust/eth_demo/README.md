@@ -61,6 +61,17 @@ screen /dev/ttyUSB1 115200
 
 To exit screen you can type `Ctrl-a k` or `Ctrl-a Ctrl-k`
 
+# License
+
+This crate is licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+  http://www.apache.org/licenses/LICENSE-2.0)
+
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
 
 [bug]: https://github.com/rust-lang/cargo/issues/7915#issuecomment-683294870
 [uart]: https://github.com/litex-hub/litex-boards/blob/e4cdbe0f7ad0653e825556d992d233a1723273e3/litex_boards/targets/colorlight_5a_75x.py#L11
